@@ -20,6 +20,9 @@ export default function Home() {
         <h1 className="text-2xl font-black tracking-tighter bg-linear-to-r from-[#8162f3] to-[#eb527d] bg-clip-text text-transparent uppercase">
           Artesanía Viajera
         </h1>
+        <p className="text-[10px] text-zinc-500 mt-1 font-mono">
+          {user?.wallet?.address}
+        </p>
         <button
           onClick={authenticated ? logout : login}
           className="px-6 py-2 bg-zinc-900 border border-zinc-800 rounded-full font-bold hover:bg-zinc-800 transition-all text-sm"
