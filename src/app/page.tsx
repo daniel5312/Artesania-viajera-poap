@@ -1,65 +1,51 @@
-import Image from "next/image";
+"use client";
+import dynamic from "next/dynamic";
+import { usePrivy } from "@privy-io/react-auth";
+
+// dynamic: función de Next.js para cargar el mapa solo en el cliente (evita error de window is not defined)
+const Mapa = dynamic(() => import("@/components/mapa"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[50vh] w-full bg-zinc-900 animate-pulse rounded-3xl" />
+  ),
+});
 
 export default function Home() {
+  const { login, authenticated, user, logout } = usePrivy();
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main className="min-h-screen p-4 md:p-8 max-w-6xl mx-auto space-y-8 bg-[#0a0a0a]">
+      {/* Navbar: Estructura HTML5 con Flexbox de Tailwind */}
+      <nav className="flex justify-between items-center py-4 border-b border-zinc-800">
+        <h1 className="text-2xl font-black tracking-tighter bg-linear-to-r from-[#8162f3] to-[#eb527d] bg-clip-text text-transparent uppercase">
+          Artesanía Viajera
+        </h1>
+        <button
+          onClick={authenticated ? logout : login}
+          className="px-6 py-2 bg-zinc-900 border border-zinc-800 rounded-full font-bold hover:bg-zinc-800 transition-all text-sm"
+        >
+          {authenticated
+            ? `Salir (${user?.email?.address?.slice(0, 6)})`
+            : "Conectar"}
+        </button>
+      </nav>
+
+      {/* Sección del Mapa: El contenedor usa z-index relativo para Leaflet */}
+      <section className="relative h-[55vh] rounded-3xl overflow-hidden border border-zinc-800 shadow-2xl">
+        <Mapa />
+      </section>
+
+      {/* Footer / Hero Text */}
+      <div className="text-center space-y-4 py-10">
+        <h2 className="text-5xl font-bold italic tracking-tighter uppercase">
+          Explora el Arte Vivo
+        </h2>
+        <p className="text-zinc-400 max-w-md mx-auto text-lg">
+          Verifica tu identidad con{" "}
+          <span className="text-[#8162f3] font-mono">Self Protocol</span> y
+          colecciona Badges en Celo.
+        </p>
+      </div>
+    </main>
   );
 }
