@@ -1,5 +1,6 @@
 "use client";
 
+import FarcasterLoader from "app/components/farcasterLoader";
 import "./globals.css";
 import Providers from "@/components/privyProvider";
 
@@ -11,7 +12,10 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body>
-        <Providers>{children}</Providers>
+        <Providers>
+          <FarcasterLoader />
+          {children}
+        </Providers>
       </body>
     </html>
   );

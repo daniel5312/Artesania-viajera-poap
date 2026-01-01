@@ -1,0 +1,4 @@
+{
+  "accountAssociation": { "header": "eyJhbGciOiJFUzI1NksifQ", "payload": "eyJkb21haW4iOiJhcnRlc2FuaWEtdmlhamVyYS52ZXJjZWwuYXBwIn0", "signature": "PENDIENTE_DE_FIRMA" },
+  "frame": { "version": "1", "name": "Artesania Viajera", "iconUrl": "https://artesania-viajera.vercel.app/icon.png", "homeUrl": "https://artesania-viajera.vercel.app" }
+}

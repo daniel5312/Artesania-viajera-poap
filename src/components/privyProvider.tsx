@@ -8,13 +8,16 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       appId="cmjkojeq70057l10b80nic7qk"
       config={{
         loginMethods: ["google", "email", "wallet", "farcaster"],
-        supportedChains: [gnosis, celo, celoSepolia],
-        defaultChain: gnosis, // Gnosis por defecto para tus POAPs
+        supportedChains: [celo, gnosis, celoSepolia],
+        defaultChain: celo,
         embeddedWallets: {
-          ethereum: { createOnLogin: "users-without-wallets" },
+          ethereum: {
+            createOnLogin: "users-without-wallets",
+          },
+          // @ts-expect-error - Privy's type definitions may not match the runtime property
+          noPromptOnSignature: true,
         },
         appearance: { theme: "dark", accentColor: "#8162f3" },
-        //embeddedWallets: { createOnLogin: 'users-without-wallets' },
       }}
     >
       {children}
