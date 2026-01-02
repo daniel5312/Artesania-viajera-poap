@@ -1,14 +1,17 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  typescript: { ignoreBuildErrors: true }, // Ahorra RAM al no validar tipos en el build
-  eslint: { ignoreDuringBuilds: true },    // Evita procesos pesados de linting
+  typescript: { ignoreBuildErrors: true },
+  eslint: { ignoreDuringBuilds: true },
+  productionBrowserSourceMaps: false,
   experimental: {
-    parallelServerBuildTraces: false,      // Clave para evitar el error SIGKILL (OOM)
-    serverMinification: false              // Reduce la carga del CPU durante la compilación
+    parallelServerBuildTraces: false,
+    serverMinification: false,
+    // Eliminamos @solana/kit de aquí para evitar que el compilador lo busque
+    optimizePackageImports: ['lucide-react', '@privy-io/react-auth']
   },
-  // Necesario para compatibilidad de librerías Web3 con Next 15+
-  transpilePackages: ['@solana/kit', '@selfxyz/core', '@selfxyz/qrcode']
+  // Solo transpila lo estrictamente necesario que cause errores de ESM
+  transpilePackages: ['@selfxyz/core', '@selfxyz/qrcode']
 };
 
 export default nextConfig;
