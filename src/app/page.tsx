@@ -1,6 +1,7 @@
 "use client";
 import dynamic from "next/dynamic";
 import { usePrivy } from "@privy-io/react-auth";
+import FarcasterLoader from "@/components/farcasterLoader";
 
 // dynamic: función de Next.js para cargar el mapa solo en el cliente (evita error de window is not defined)
 const Mapa = dynamic(() => import("@/components/mapa"), {
@@ -32,7 +33,7 @@ export default function Home() {
             : "Conectar"}
         </button>
       </nav>
-
+      <FarcasterLoader />
       {/* Sección del Mapa: El contenedor usa z-index relativo para Leaflet */}
       <section className="relative h-[55vh] rounded-3xl overflow-hidden border border-zinc-800 shadow-2xl">
         <Mapa />
