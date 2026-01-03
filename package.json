@@ -6,8 +6,7 @@
     "build": "node --max-old-space-size=3072 ./node_modules/.bin/next build",
     "dev": "next dev",
     "start": "next start",
-    "lint": "next lint",
-    "install": "npm install --legacy-peer-deps"
+    "lint": "next lint"
   },
   "dependencies": {
     "@farcaster/frame-sdk": "^0.0.64",
