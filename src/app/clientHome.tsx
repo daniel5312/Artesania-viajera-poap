@@ -17,25 +17,31 @@ const Mapa = dynamic(() => import("@/components/mapa"), {
 export default function ClientHome() {
   const { login, authenticated, user, logout } = usePrivy();
   const [isHuman, setIsHuman] = useState(false);
+  const [isClient, setIsClient] = useState(false); // Fix para hidratación y QR
 
   useEffect(() => {
+    setIsClient(true);
     sdk.actions.ready();
   }, []);
 
   const selfApp = useMemo(() => {
-    // FIX: Evita que el builder corra en el servidor durante el build
-    if (typeof window === "undefined") return null;
+    // Si no hay wallet o no estamos en el cliente, no construimos la instancia
+    if (!isClient || !user?.wallet?.address) return null;
 
-    return new SelfAppBuilder({
-      version: 2,
-      appName: "Artesania Viajera",
-      scope: "human-check",
-      userId:
-        user?.wallet?.address || "0x0000000000000000000000000000000000000000",
-      disclosures: { isHuman: true },
-      endpoint: "https://api.self.xyz",
-    }).build();
-  }, [user?.wallet?.address]);
+    try {
+      return new SelfAppBuilder({
+        version: 2,
+        appName: "Artesania Viajera",
+        scope: "human-check",
+        userId: user.wallet.address,
+        disclosures: { isHuman: true },
+        endpoint: "https://api.self.xyz",
+      }).build();
+    } catch (e) {
+      console.error("Self SDK Error:", e);
+      return null;
+    }
+  }, [isClient, user?.wallet?.address]);
 
   return (
     <main className="min-h-screen p-4 md:p-8 max-w-6xl mx-auto space-y-8 bg-[#0a0a0a]">
@@ -63,17 +69,22 @@ export default function ClientHome() {
           <h2 className="text-2xl font-bold uppercase italic">
             Verifica tu Humanidad
           </h2>
-          <div className="bg-white p-4 rounded-2xl">
-            {/* FIX: Solo renderiza si selfApp fue construido exitosamente */}
-            {selfApp && (
+          <div className="bg-white p-4 rounded-2xl min-h-62.5 min-w-62.5 flex items-center justify-center">
+            {selfApp ? (
               <SelfQRcodeWrapper
                 selfApp={selfApp}
                 onSuccess={() => setIsHuman(true)}
               />
+            ) : (
+              <p className="text-black font-bold text-center px-4 leading-tight">
+                {authenticated
+                  ? "Generando código..."
+                  : "Conecta tu wallet para generar el QR"}
+              </p>
             )}
           </div>
           <p className="text-zinc-400">
-            Escanea con Self para desbloquear el mapa.
+            Escanea con la App de Self para desbloquear el mapa.
           </p>
         </section>
       ) : (
