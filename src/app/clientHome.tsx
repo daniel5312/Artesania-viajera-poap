@@ -1,10 +1,11 @@
 "use client";
-import { useState, useEffect, useMemo } from "react"; // Cambio: añadido useEffect y useState
+import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { usePrivy } from "@privy-io/react-auth";
 import FarcasterLoader from "@/components/farcasterLoader";
-import sdk from "@farcaster/frame-sdk"; // Cambio: Import SDK Farcaster
-import { SelfQRcodeWrapper, SelfAppBuilder } from "@selfxyz/qrcode"; // Cambio: Import Self Protocol
+import sdk from "@farcaster/frame-sdk";
+// @ts-ignore
+import { SelfQRcodeWrapper, SelfAppBuilder } from "@selfxyz/qrcode";
 
 const Mapa = dynamic(() => import("@/components/mapa"), {
   ssr: false,
@@ -15,15 +16,16 @@ const Mapa = dynamic(() => import("@/components/mapa"), {
 
 export default function ClientHome() {
   const { login, authenticated, user, logout } = usePrivy();
-  const [isHuman, setIsHuman] = useState(false); // Estado para track de Identidad
+  const [isHuman, setIsHuman] = useState(false);
 
-  // Cambio: Inicialización obligatoria para Track Farcaster
   useEffect(() => {
     sdk.actions.ready();
   }, []);
 
-  // Configuración de Self Protocol
   const selfApp = useMemo(() => {
+    // FIX: Evita que el builder corra en el servidor durante el build
+    if (typeof window === "undefined") return null;
+
     return new SelfAppBuilder({
       version: 2,
       appName: "Artesania Viajera",
@@ -56,17 +58,19 @@ export default function ClientHome() {
 
       <FarcasterLoader />
 
-      {/* Cambio: Condicional para mostrar QR de Self o el Mapa */}
       {!isHuman ? (
         <section className="flex flex-col items-center justify-center p-12 bg-zinc-900 border border-[#8162f3] rounded-3xl space-y-6">
           <h2 className="text-2xl font-bold uppercase italic">
             Verifica tu Humanidad
           </h2>
           <div className="bg-white p-4 rounded-2xl">
-            <SelfQRcodeWrapper
-              selfApp={selfApp}
-              onSuccess={() => setIsHuman(true)}
-            />
+            {/* FIX: Solo renderiza si selfApp fue construido exitosamente */}
+            {selfApp && (
+              <SelfQRcodeWrapper
+                selfApp={selfApp}
+                onSuccess={() => setIsHuman(true)}
+              />
+            )}
           </div>
           <p className="text-zinc-400">
             Escanea con Self para desbloquear el mapa.
