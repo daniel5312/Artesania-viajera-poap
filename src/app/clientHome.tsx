@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react"; // Cambio: añadido useEffect y useState
+import { useState, useEffect, useMemo } from "react"; // Cambio: añadido useEffect y useState
 import dynamic from "next/dynamic";
 import { usePrivy } from "@privy-io/react-auth";
 import FarcasterLoader from "@/components/farcasterLoader";
@@ -23,14 +23,17 @@ export default function ClientHome() {
   }, []);
 
   // Configuración de Self Protocol
-  const selfApp = new SelfAppBuilder({
-    version: 2,
-    appName: "Artesania Viajera",
-    scope: "human-check",
-    userId:
-      user?.wallet?.address || "0x0000000000000000000000000000000000000000",
-    disclosures: { isHuman: true },
-  }).build();
+  const selfApp = useMemo(() => {
+    return new SelfAppBuilder({
+      version: 2,
+      appName: "Artesania Viajera",
+      scope: "human-check",
+      userId:
+        user?.wallet?.address || "0x0000000000000000000000000000000000000000",
+      disclosures: { isHuman: true },
+      endpoint: "https://api.self.xyz",
+    }).build();
+  }, [user?.wallet?.address]);
 
   return (
     <main className="min-h-screen p-4 md:p-8 max-w-6xl mx-auto space-y-8 bg-[#0a0a0a]">
