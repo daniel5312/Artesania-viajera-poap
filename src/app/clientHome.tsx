@@ -5,8 +5,13 @@ import { usePrivy } from "@privy-io/react-auth";
 import FarcasterLoader from "@/components/farcasterLoader";
 import sdk from "@farcaster/frame-sdk";
 // @ts-ignore
-import { SelfQRcodeWrapper, SelfAppBuilder } from "@selfxyz/qrcode";
+import { SelfAppBuilder } from "@selfxyz/qrcode";
 
+// CORRECCIÓN 1: Importación dinámica obligatoria para evitar errores de Next.js
+const SelfQRcodeWrapper = dynamic<any>(
+  () => import("@selfxyz/qrcode").then((mod) => mod.SelfQRcodeWrapper),
+  { ssr: false }
+);
 const Mapa = dynamic(() => import("@/components/mapa"), {
   ssr: false,
   loading: () => (
@@ -32,12 +37,15 @@ export default function ClientHome() {
         appName: "Artesania Viajera",
         scope:
           "15359325017492470634047168286756315656265970753901363455078301965319707372828",
-        configId: "0x7b6436b0c90c743896504a5ee1307d61",
-        userId: user.wallet.address,
-        disclosures: { isHuman: true },
         endpoint: "https://api.self.xyz",
+        userId: user.wallet.address,
+        // CORRECCIÓN 2: Parámetros técnicos obligatorios del SDK
+        endpointType: "staging_https",
+        userIdType: "hex",
+        disclosures: { isHuman: true },
       }).build();
     } catch (e) {
+      console.error("Self Error:", e);
       return null;
     }
   }, [mounted, user?.wallet?.address]);
@@ -69,7 +77,7 @@ export default function ClientHome() {
           </h2>
           <div className="bg-white p-6 rounded-2xl flex items-center justify-center shadow-lg w-80 h-80 overflow-hidden">
             {authenticated && selfApp ? (
-              <div className="w-full h-full flex items-center justify-center scale-90">
+              <div className="w-full h-full flex items-center justify-center scale-90 text-black">
                 <SelfQRcodeWrapper
                   key={user?.wallet?.address}
                   selfApp={selfApp}
@@ -80,7 +88,7 @@ export default function ClientHome() {
               <div className="flex flex-col items-center gap-3 text-black">
                 <div className="w-8 h-8 border-4 border-[#8162f3] border-t-transparent rounded-full animate-spin" />
                 <p className="font-bold text-sm">
-                  {authenticated ? "Cargando QR..." : "Conecta tu Wallet"}
+                  {authenticated ? "Generando QR..." : "Conecta tu Wallet"}
                 </p>
               </div>
             )}
