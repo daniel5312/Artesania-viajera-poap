@@ -30,7 +30,9 @@ export default function ClientHome() {
       return new SelfAppBuilder({
         version: 2,
         appName: "Artesania Viajera",
-        scope: "human-check",
+        scope:
+          "15359325017492470634047168286756315656265970753901363455078301965319707372828",
+        configId: "0x7b6436b0c90c743896504a5ee1307d61",
         userId: user.wallet.address,
         disclosures: { isHuman: true },
         endpoint: "https://api.self.xyz",
@@ -49,7 +51,7 @@ export default function ClientHome() {
         </h1>
         <button
           onClick={authenticated ? logout : login}
-          className="px-6 py-2 bg-zinc-900 border border-zinc-800 rounded-full font-bold hover:bg-zinc-800 transition-all text-sm"
+          className="px-6 py-2 bg-zinc-900 border border-zineac-800 rounded-full font-bold hover:bg-zinc-800 transition-all text-sm"
         >
           {authenticated
             ? `Salir (${user?.wallet?.address?.slice(0, 6)})`
