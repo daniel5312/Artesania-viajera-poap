@@ -34,12 +34,10 @@ export default function ClientHome() {
     try {
       return new SelfAppBuilder({
         version: 2,
-        appName: "Artesania Viajera",
-        scope:
-          "15359325017492470634047168286756315656265970753901363455078301965319707372828",
-        endpoint: "https://api.self.xyz",
+        appName: process.env.NEXT_PUBLIC_SELF_APP_NAME || "Artesania Viajera",
+        scope: process.env.NEXT_PUBLIC_SELF_SCOPE, // <-- AQUÍ: Ahora sí usa tu .env
+        endpoint: process.env.NEXT_PUBLIC_SELF_ENDPOINT, // <-- AQUÍ: Tu contrato 0x409f...
         userId: user.wallet.address,
-        // CORRECCIÓN 2: Parámetros técnicos obligatorios del SDK
         endpointType: "staging_https",
         userIdType: "hex",
         disclosures: { isHuman: true },
