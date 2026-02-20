@@ -7,7 +7,7 @@
   evm_version = "paris"           # See https://www.evmdiff.com/features?name=PUSH0&kind=opcode
   fuzz = { runs = 1_000 }
   gas_reports = ["*"]
-  libs = ["lib"]
+  libs = ["node_modules", "lib"]
   optimizer = true
   optimizer_runs = 10_000
   out = "out"
@@ -15,6 +15,13 @@
   solc = "0.8.28"
   src = "src"
   test = "test"
+
+# CAMBIO 2: Mapeamos manualmente las carpetas de npm
+remappings = [
+  "forge-std/=node_modules/forge-std/src/",
+  "@openzeppelin/=node_modules/@openzeppelin/",
+  "@selfxyz/=node_modules/@selfxyz/"
+]
 
 [profile.ci]
   fuzz = { runs = 10_000 }

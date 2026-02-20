@@ -1,17 +1,12 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { usePrivy } from "@privy-io/react-auth";
 import FarcasterLoader from "@/components/farcasterLoader";
 import sdk from "@farcaster/frame-sdk";
-// @ts-ignore
-import { SelfAppBuilder } from "@selfxyz/qrcode";
+import Checkout from "@/components/checkout"; // <--- AGREGA ESTO
 
-// CORRECCIÓN 1: Importación dinámica obligatoria para evitar errores de Next.js
-const SelfQRcodeWrapper = dynamic<any>(
-  () => import("@selfxyz/qrcode").then((mod) => mod.SelfQRcodeWrapper),
-  { ssr: false }
-);
+// Importaciones dinámicas para evitar errores de hidratación
 const Mapa = dynamic(() => import("@/components/mapa"), {
   ssr: false,
   loading: () => (
@@ -19,87 +14,96 @@ const Mapa = dynamic(() => import("@/components/mapa"), {
   ),
 });
 
+const MomentosGrid = dynamic(() => import("@/components/momentosGrid"), {
+  ssr: false,
+});
+
 export default function ClientHome() {
   const { login, authenticated, user, logout } = usePrivy();
-  const [isHuman, setIsHuman] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    sdk.actions.ready();
-  }, []);
-
-  const selfApp = useMemo(() => {
-    if (!mounted || !user?.wallet?.address) return null;
-    try {
-      return new SelfAppBuilder({
-        version: 2,
-        appName: process.env.NEXT_PUBLIC_SELF_APP_NAME || "Artesania Viajera",
-        scope: process.env.NEXT_PUBLIC_SELF_SCOPE, // <-- AQUÍ: Ahora sí usa tu .env
-        endpoint: process.env.NEXT_PUBLIC_SELF_ENDPOINT, // <-- AQUÍ: Tu contrato 0x409f...
-        userId: user.wallet.address,
-        endpointType: "staging_https",
-        userIdType: "hex",
-        disclosures: { isHuman: true },
-      }).build();
-    } catch (e) {
-      console.error("Self Error:", e);
-      return null;
+    if (sdk?.actions?.ready) {
+      sdk.actions.ready();
     }
-  }, [mounted, user?.wallet?.address]);
+  }, []);
 
   if (!mounted) return null;
 
   return (
     <main className="min-h-screen p-4 md:p-8 max-w-6xl mx-auto space-y-8 bg-[#0a0a0a] text-white">
+      {/* --- NAVBAR ORIGINAL RECUPERADO --- */}
       <nav className="flex justify-between items-center py-4 border-b border-zinc-800">
-        <h1 className="text-2xl font-black tracking-tighter bg-linear-to-r from-[#8162f3] to-[#eb527d] bg-clip-text text-transparent uppercase">
+        <h1 className="text-2xl font-black tracking-tighter bg-linear-to-tr from-[#8162f3] to-[#eb527d] bg-clip-text text-transparent uppercase">
           Artesanía Viajera
         </h1>
-        <button
-          onClick={authenticated ? logout : login}
-          className="px-6 py-2 bg-zinc-900 border border-zinc-800 rounded-full font-bold hover:bg-zinc-800 transition-all text-sm"
-        >
-          {authenticated
-            ? `Salir (${user?.wallet?.address?.slice(0, 6)})`
-            : "Conectar"}
-        </button>
+        <div className="flex gap-4 items-center">
+          {authenticated && (
+            <span className="hidden md:block text-[10px] text-zinc-500 font-mono">
+              {user?.wallet?.address?.slice(0, 6)}...
+              {user?.wallet?.address?.slice(-4)}
+            </span>
+          )}
+          <button
+            onClick={authenticated ? logout : login}
+            className="px-6 py-2 bg-zinc-900 border border-zinc-800 rounded-full font-bold hover:bg-zinc-800 transition-all text-sm text-white"
+          >
+            {authenticated ? "Salir" : "Conectar Wallet"}
+          </button>
+        </div>
       </nav>
 
       <FarcasterLoader />
 
-      {!isHuman ? (
-        <section className="flex flex-col items-center justify-center p-12 bg-zinc-900 border border-[#8162f3] rounded-3xl space-y-6">
-          <h2 className="text-2xl font-bold uppercase italic text-center">
-            Verifica tu Humanidad
+      {/* --- SECCIÓN DEL MAPA (Ahora siempre visible) --- */}
+      <section className="relative h-[45vh] rounded-3xl overflow-hidden border border-zinc-800 shadow-2xl">
+        <Mapa />
+        <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-md px-4 py-1 rounded-full border border-white/10 text-[10px] font-bold uppercase tracking-widest text-purple-400">
+          Explora Antioquia 📍
+        </div>
+      </section>
+
+      {/* --- SECCIÓN DE MOMENTOS (Lo que hablamos) --- */}
+      <section className="space-y-6">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-3xl font-black uppercase italic tracking-tighter">
+            Mi Pasaporte Digital
           </h2>
-          <div className="bg-white p-6 rounded-2xl flex items-center justify-center shadow-lg w-80 h-80 overflow-hidden">
-            {authenticated && selfApp ? (
-              <div className="w-full h-full flex items-center justify-center scale-90 text-black">
-                <SelfQRcodeWrapper
-                  key={user?.wallet?.address}
-                  selfApp={selfApp}
-                  onSuccess={() => setIsHuman(true)}
-                />
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-3 text-black">
-                <div className="w-8 h-8 border-4 border-[#8162f3] border-t-transparent rounded-full animate-spin" />
-                <p className="font-bold text-sm">
-                  {authenticated ? "Generando QR..." : "Conecta tu Wallet"}
-                </p>
-              </div>
-            )}
+          <p className="text-zinc-500 text-sm">
+            Tus recuerdos irrefutables en la blockchain de Celo.
+          </p>
+        </div>
+
+        {authenticated ? (
+          <MomentosGrid />
+        ) : (
+          <div className="p-12 bg-zinc-900/40 border-2 border-dashed border-zinc-800 rounded-3xl text-center space-y-6">
+            <div className="space-y-2">
+              <p className="text-zinc-400 font-medium">
+                Inicia sesión para empezar a coleccionar tus momentos
+                artesanales.
+              </p>
+              <p className="text-xs text-zinc-600">
+                Al conectar, se creará tu pasaporte único.
+              </p>
+            </div>
+            <button
+              onClick={login}
+              className="px-10 py-4 bg-linear-to-tr from-[#8162f3] to-[#eb527d] rounded-full font-black uppercase text-sm hover:scale-105 transition-transform shadow-[0_0_20px_rgba(129,98,243,0.3)]"
+            >
+              Conectar Ahora
+            </button>
           </div>
-        </section>
-      ) : (
-        <section className="relative h-[55vh] rounded-3xl overflow-hidden border border-zinc-800 shadow-2xl">
-          <Mapa />
-          <div className="absolute top-4 right-4 bg-green-500 text-black px-4 py-1 rounded-full font-bold text-xs animate-bounce">
-            HUMANO VERIFICADO ✅
-          </div>
-        </section>
-      )}
+        )}
+      </section>
+
+      {/* --- FOOTER DE CONFIANZA --- */}
+      <footer className="pt-20 pb-10 text-center space-y-4">
+        <p className="text-[10px] text-zinc-600 uppercase tracking-[0.5em]">
+          Powered by Celo Sepolia & Privy
+        </p>
+      </footer>
     </main>
   );
 }
