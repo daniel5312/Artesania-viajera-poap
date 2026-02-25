@@ -24,6 +24,12 @@ export default function Navbar() {
           {/* LINKS ESCRITORIO */}
           <div className="hidden md:flex space-x-8 items-center text-sm font-medium text-zinc-300">
             <Link
+              href="/pitch"
+              className="hover:text-purple-400 transition-colors"
+            >
+              Pitch Deck
+            </Link>
+            <Link
               href="/tienda"
               className="hover:text-purple-400 transition-colors"
             >
