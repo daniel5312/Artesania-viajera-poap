@@ -12,6 +12,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
+      <meta
+        httpEquiv="Content-Security-Policy"
+        content="... connect-src 'self' https://auth.privy.io https://gateway.pinata.cloud https://*.mypinata.cloud; ..."
+      />
       <body>
         <Providers>
           <Navbar />
