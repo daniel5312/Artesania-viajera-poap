@@ -24,9 +24,8 @@ function AppShell() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Traemos el contexto del nuevo tema
   const { isDarkMode } = useTheme();
-  // 🟢 MAGIA: Cambiamos el color de toda la pantalla desde la raíz
+
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add("dark");
@@ -34,6 +33,7 @@ function AppShell() {
       document.documentElement.classList.remove("dark");
     }
   }, [isDarkMode]);
+
   const [mounted, setMounted] = useState(false);
   const [isAutoMinting, setIsAutoMinting] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("pasaporte");
@@ -80,8 +80,8 @@ function AppShell() {
           console.error("Error en auto-mint:", error);
         } finally {
           setIsAutoMinting(false);
-          // Redirigimos a /minipay para limpiar la URL del QR
-          router.replace("/minipay", { scroll: false });
+          // 🟢 CORRECCIÓN: Redirigimos a la raíz "/" para limpiar la URL del QR en Mainnet
+          router.replace("/", { scroll: false });
         }
       }
     };
@@ -97,12 +97,10 @@ function AppShell() {
     >
       <FarcasterLoader />
 
-      {/* HEADER INTELIGENTE CON PRIVY */}
       <WalletHeader />
 
-      {/* OVERLAY DE CARGA DEL QR */}
       {isAutoMinting && (
-        <div className="absolute inset-0 z-index[100] bg-background/80 backdrop-blur-md flex flex-col items-center justify-center text-center p-6">
+        <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-md flex flex-col items-center justify-center text-center p-6">
           <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
           <h2 className="text-xl font-black uppercase text-foreground">
             Estampando Sello...
@@ -110,7 +108,6 @@ function AppShell() {
         </div>
       )}
 
-      {/* AVISO SI HAY QR PERO NO ESTÁ LOGUEADO */}
       {selloPendiente && !authenticated && (
         <div className="mx-5 mt-4 p-4 rounded-2xl bg-primary/10 border border-primary/30 text-center animate-pulse">
           <p className="text-sm font-bold text-primary mb-2">
@@ -125,15 +122,15 @@ function AppShell() {
         </div>
       )}
 
-      {/* VISTAS DINÁMICAS */}
       <main className="mt-2 pb-24">
-        {activeTab === "pasaporte" && <PasaporteView />}
+        {activeTab === "pasaporte" && (
+          <PasaporteView onNavigate={setActiveTab} />
+        )}
         {activeTab === "tienda" && <TiendaView />}
         {activeTab === "momentos" && <MomentosView />}
         {activeTab === "comunidad" && <ComunidadView />}
       </main>
 
-      {/* NAVEGACIÓN INFERIOR ESTILO APP */}
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
   );

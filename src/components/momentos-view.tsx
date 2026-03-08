@@ -1,88 +1,118 @@
 "use client";
-
-import { useState, useEffect } from "react";
-import { Heart, MessageCircle, MapPin, Users, ShoppingBag } from "lucide-react";
-import Image from "next/image";
+import { useState, useEffect, useCallback } from "react";
+import { Loader2 } from "lucide-react";
 import { useTheme } from "@/lib/theme-context";
 import { t } from "@/lib/i18n";
-import { useReadContract, useAccount } from "wagmi";
-import { PASSPORT_CONTRACT } from "app/constants/contracts";
+import { createPublicClient, http } from "viem";
+//import { celoSepolia } from "viem/chains";
+import { celo } from "viem/chains";
+import { REGISTRY_CONTRACT } from "@/constants/contracts";
+
+const publicClient = createPublicClient({
+  chain: celo,
+  transport: http(),
+});
+const PUEBLOS_IDS = [
+  "guatape_socalos",
+  "sombrillas_guatape",
+  "jardin_cafe",
+  "envigado_verde",
+  "jerico_cuero",
+  "mompox_filigrana",
+  "santafe_colonial",
+];
 
 export function MomentosView() {
-  const { isDarkMode, lang } = useTheme();
-  const { address } = useAccount();
-  const [liked, setLiked] = useState<Set<number>>(new Set());
+  const { lang } = useTheme();
+  const [momentosReales, setMomentosReales] = useState<any[]>([]);
+  const [cargando, setCargando] = useState(false);
 
-  // 1. Leemos cuántos NFTs tiene el usuario
-  const { data: balance } = useReadContract({
-    ...PASSPORT_CONTRACT,
-    functionName: "balanceOf",
-    args: address ? [address] : undefined,
-  });
+  const leerMomentos = useCallback(async () => {
+    setCargando(true);
+    try {
+      let todos: any[] = [];
+      const gateway =
+        process.env.NEXT_PUBLIC_GATEWAY_URL || "gateway.pinata.cloud";
 
-  // 2. Aquí podrías mapear los URIs reales.
-  // Por ahora, usemos el balance para validar la conexión.
-  useEffect(() => {
-    if (balance) {
-      console.log("¡Tienes NFTs reales!", balance.toString());
+      for (const id of PUEBLOS_IDS) {
+        try {
+          const mural = (await publicClient.readContract({
+            ...REGISTRY_CONTRACT,
+            functionName: "obtenerMural",
+            args: [id],
+          })) as any[];
+
+          if (mural) {
+            // 🟢 AQUÍ ESTÁ LA CORRECCIÓN PARA LAS FOTOS ROTAS
+            todos.push(
+              ...mural.map((m) => {
+                let urlLimpia = m.cid;
+                if (urlLimpia.startsWith("ipfs://")) {
+                  urlLimpia = urlLimpia.replace(
+                    "ipfs://",
+                    `https://${gateway}/ipfs/`,
+                  );
+                } else if (!urlLimpia.startsWith("http")) {
+                  // Si viene el hash crudo como Qm...
+                  urlLimpia = `https://${gateway}/ipfs/${urlLimpia}`;
+                }
+                return {
+                  url: urlLimpia,
+                  pueblo: id,
+                };
+              }),
+            );
+          }
+        } catch (e) {}
+      }
+      setMomentosReales(todos.reverse());
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCargando(false);
     }
-  }, [balance]);
+  }, []);
 
-  const cardClass = isDarkMode
-    ? "border border-primary/10 shadow-[0_0_12px_rgba(129,98,243,0.06)] bg-card"
-    : "shadow-md border-0 bg-card";
+  useEffect(() => {
+    leerMomentos();
+  }, [leerMomentos]);
 
   return (
     <div className="flex flex-col gap-4 px-5 pb-24">
-      {/* Indicador de Sincronización con Blockchain */}
       <div className="flex items-center justify-between bg-primary/10 p-3 rounded-2xl border border-primary/20">
-        <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
-          Estado Celo Sepolia
+        <span className="text-[10px] font-bold text-primary uppercase">
+          Mural Celo Sepolia
         </span>
         <span className="text-xs font-medium text-foreground">
-          {balance
-            ? `${balance.toString()} Momentos Encontrados`
-            : "Buscando momentos..."}
+          {cargando ? (
+            <Loader2 className="w-3 h-3 animate-spin text-primary" />
+          ) : (
+            `${momentosReales.length} Fotos`
+          )}
         </span>
       </div>
-
       <div>
-        <h2 className="text-base font-semibold text-foreground">
-          {t(lang, "momentos.title")}
-        </h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {t(lang, "momentos.subtitle")}
-        </p>
+        <h2 className="text-base font-semibold">{t(lang, "momentos.title")}</h2>
       </div>
-
-      {/* Aquí iría el mapeo de tus NFTs reales una vez obtengamos los URIs */}
-      <div className="flex flex-col gap-4">
-        {Number(balance) === 0 ? (
-          <div className="text-center p-10 border-2 border-dashed border-muted rounded-3xl">
-            <p className="text-xs text-muted-foreground">
-              Aún no has inmortalizado momentos en este viaje.
-            </p>
+      <div className="flex flex-col gap-4 mt-2">
+        {cargando ? (
+          <div className="flex justify-center py-10">
+            <Loader2 className="animate-spin text-primary w-8 h-8" />
           </div>
+        ) : momentosReales.length === 0 ? (
+          <p className="text-center text-xs">Aún no hay fotos.</p>
         ) : (
-          <p className="text-center text-[10px] text-accent font-bold">
-            ¡Tu galería blockchain está lista!
-          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {momentosReales.map((m, i) => (
+              <div
+                key={i}
+                className="aspect-square rounded-xl overflow-hidden bg-card border border-primary/20"
+              >
+                <img src={m.url} className="w-full h-full object-cover" />
+              </div>
+            ))}
+          </div>
         )}
-      </div>
-
-      {/* Banner de Acción */}
-      <div
-        className={`rounded-3xl p-5 text-center ${isDarkMode ? "border border-primary/30 bg-primary/5" : "bg-primary/5 shadow-md"}`}
-      >
-        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/15">
-          <ShoppingBag className="h-5 w-5 text-primary" />
-        </div>
-        <h3 className="text-sm font-bold text-foreground">
-          {t(lang, "momentos.ctaTitle")}
-        </h3>
-        <button className="mt-3 w-full rounded-2xl bg-linear-to-r from-teal to-primary px-6 py-2.5 text-xs font-semibold text-primary-foreground shadow-lg transition-all active:scale-[0.98]">
-          {t(lang, "momentos.goToShop")}
-        </button>
       </div>
     </div>
   );

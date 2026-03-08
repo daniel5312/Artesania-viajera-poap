@@ -1,15 +1,13 @@
-// 1. Agrega estos hooks al inicio de tu componente
 "use client";
 
 import { useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
-import { useSendTransaction, useSwitchChain } from "wagmi"; // 🟢 Importante para Sepolia
+import { useSendTransaction, useSwitchChain } from "wagmi";
 import { parseEther, getAddress } from "viem";
-import { celoSepolia } from "viem/chains"; // 🟢 Forzamos la red
+import { celo } from "viem/chains";
 import { useTheme } from "@/lib/theme-context";
-import { Loader2, ShoppingCart, CheckCircle } from "lucide-react";
+import { Loader2, CheckCircle } from "lucide-react";
 
-// 1. Catálogo con tus rutas de public/images/
 const NFT_PRODUCTS = [
   {
     id: 1,
@@ -17,7 +15,7 @@ const NFT_PRODUCTS = [
     price: "0.05",
     puebloId: "guatape_socalos",
     img: "/images/community-1.jpg",
-    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b", // ✅ Tu wallet de artesano
+    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
   },
   {
     id: 2,
@@ -25,7 +23,7 @@ const NFT_PRODUCTS = [
     price: "0.05",
     puebloId: "sombrillas_guatape",
     img: "/images/community-2.jpg",
-    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b", // ✅ Tu wallet de artesano
+    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
   },
   {
     id: 3,
@@ -33,14 +31,14 @@ const NFT_PRODUCTS = [
     price: "0.08",
     puebloId: "jardin_cafe",
     img: "/images/product-manilla.jpg",
-    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b", // ✅ Tu wallet de artesano
+    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
   },
   {
     id: 4,
     name: "Envigado",
     price: "0.05",
     puebloId: "envigado_verde",
-    img: "/images/product-sombrero.jpg", // ✅ Ruta Real
+    img: "/images/product-sombrero.jpg",
     wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
   },
   {
@@ -48,7 +46,7 @@ const NFT_PRODUCTS = [
     name: "Jericó",
     price: "0.1",
     puebloId: "jerico_cuero",
-    img: "/images/product-mochila.jpg", // ✅ Ruta Real
+    img: "/images/product-mochila.jpg",
     wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
   },
   {
@@ -56,7 +54,7 @@ const NFT_PRODUCTS = [
     name: "Mompox",
     price: "0.12",
     puebloId: "mompox_filigrana",
-    img: "/images/stamp-guatape.jpg", // ✅ Corregido el typo de 'tamp'
+    img: "/images/stamp-guatape.jpg",
     wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
   },
 ];
@@ -64,7 +62,7 @@ const NFT_PRODUCTS = [
 export function TiendaView() {
   const { user, authenticated, login } = usePrivy();
   const { sendTransactionAsync } = useSendTransaction();
-  const { switchChainAsync } = useSwitchChain(); // 🟢 Para evitar el error de Ethereum
+  const { switchChainAsync } = useSwitchChain();
   const { isDarkMode } = useTheme();
 
   const [paying, setPaying] = useState<number | null>(null);
@@ -75,19 +73,22 @@ export function TiendaView() {
     setPaying(product.id);
 
     try {
-      // 🟢 FORZAR CAMBIO A CELO SEPOLIA
-      await switchChainAsync({ chainId: celoSepolia.id });
+      // Forzar cambio a Mainnet si es necesario
+      try {
+        await switchChainAsync({ chainId: celo.id });
+      } catch (e) {
+        console.log("Ya en Celo Mainnet o usuario canceló switch");
+      }
 
-      // 💸 TRANSACCIÓN EN CELO
+      // Ejecutar transferencia real de CELO
       const tx = await sendTransactionAsync({
         to: getAddress(product.wallet),
         value: parseEther(product.price),
-        chainId: celoSepolia.id,
       });
 
-      console.log("Transacción enviada:", tx);
+      console.log("Transacción exitosa:", tx);
 
-      // 🎨 MINTEO
+      // Llamada al backend para mintear el NFT en el nuevo contrato de Mainnet
       const res = await fetch("/api/mint-passport", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -99,28 +100,33 @@ export function TiendaView() {
 
       if (res.ok) {
         setPaid((prev) => new Set(prev).add(product.id));
-        alert("¡Apoyo recibido! NFT Gemelo enviado a tu pasaporte.");
+        alert(
+          "¡Gracias por apoyar al artesano! Tu sello ya está en el pasaporte.",
+        );
       }
-    } catch (error) {
-      console.error("Error en compra:", error);
-      alert("La transacción no se pudo completar. Revisa tu red Sepolia.");
+    } catch (error: any) {
+      console.error("Error en flujo de compra:", error);
+      alert(
+        error.shortMessage ||
+          "La transacción falló. Asegúrate de tener saldo en CELO real y estar en Celo Mainnet.",
+      );
     } finally {
       setPaying(null);
     }
   }
 
   return (
-    <div className="flex flex-col gap-6 px-4 pb-24">
-      <header className="pt-4 px-1 text-center">
-        <h2 className="text-xl font-black uppercase tracking-tighter text-foreground italic">
+    <div className="flex flex-col gap-5 px-4 pb-24">
+      <header className="pt-2 px-1 text-center">
+        <h2 className="text-lg font-black uppercase tracking-tighter text-foreground italic">
           Mercado de Sellos
         </h2>
-        <p className="text-[10px] font-bold text-primary uppercase tracking-widest">
-          Celo Sepolia Testnet
+        <p className="text-[9px] font-bold text-primary uppercase tracking-widest">
+          Celo Mainnet 🚀
         </p>
       </header>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2">
         {NFT_PRODUCTS.map((nft) => (
           <div
             key={nft.id}
@@ -135,14 +141,10 @@ export function TiendaView() {
                 src={nft.img}
                 alt={nft.name}
                 className={`w-full h-full object-cover transition-all duration-500 ${paid.has(nft.id) ? "grayscale-0" : "grayscale-[0.6] opacity-80"}`}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    "https://placehold.co/400x400/8162f3/white?text=AV";
-                }}
               />
               {paid.has(nft.id) && (
                 <div className="absolute inset-0 bg-primary/20 flex items-center justify-center backdrop-blur-[1px]">
-                  <CheckCircle className="text-white h-8 w-8 drop-shadow-md animate-in zoom-in" />
+                  <CheckCircle className="text-white h-6 w-6 drop-shadow-md animate-in zoom-in" />
                 </div>
               )}
             </div>
@@ -158,9 +160,9 @@ export function TiendaView() {
               <button
                 onClick={() => handlePay(nft)}
                 disabled={paying !== null || paid.has(nft.id)}
-                className={`mt-1 w-full py-2 rounded-xl text-[8px] font-black uppercase transition-all flex items-center justify-center gap-1 ${
+                className={`mt-1 w-full py-1.5 rounded-lg text-[8px] font-black uppercase transition-all flex items-center justify-center gap-1 ${
                   paid.has(nft.id)
-                    ? "bg-teal/10 text-teal border border-teal/20"
+                    ? "bg-green-500/10 text-green-500 border border-green-500/20"
                     : "bg-primary text-white shadow-md active:bg-primary/80"
                 }`}
               >
@@ -177,8 +179,8 @@ export function TiendaView() {
         ))}
       </div>
 
-      <div className="mt-4 p-4 rounded-3xl bg-primary/5 border border-dashed border-primary/20 text-center">
-        <p className="text-[10px] text-muted-foreground leading-relaxed">
+      <div className="mt-2 p-3 rounded-2xl bg-primary/5 border border-dashed border-primary/20 text-center">
+        <p className="text-[9px] text-muted-foreground leading-relaxed">
           "El 100% de tu apoyo va directo a la billetera de los artesanos
           locales."
         </p>

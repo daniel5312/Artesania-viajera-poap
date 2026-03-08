@@ -11,7 +11,7 @@ contract DeployRegistry is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
         // 2. La dirección de tu Passport que ya está en Sepolia
-        address passportAddress = 0x86b6E480a423f49C4104EeAcC13c262263c24ee9;
+        address passportAddress = 0xF62d9Ed4243c08C0191C62ac5dA9F77abC7559b5;
 
         vm.startBroadcast(deployerPrivateKey);
 

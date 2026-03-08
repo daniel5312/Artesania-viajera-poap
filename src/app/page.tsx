@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import ClientHome from "./clientHome";
+import MiniPayPage from "./minipay/page"; // Importamos tu lógica de MiniPay
 
 const frameMetadata = {
   version: "next",
@@ -18,12 +18,13 @@ const frameMetadata = {
 
 export const metadata: Metadata = {
   title: "Artesanía Viajera",
-  description: "Explora y colecciona artesanías con Farcaster y Self",
+  description: "Pasaporte Digital de Artesanías en Celo Mainnet",
   other: {
     "fc:frame": JSON.stringify(frameMetadata),
   },
 };
 
 export default function Page() {
-  return <ClientHome />;
+  // Cargamos directamente la vista de MiniPay que ya tiene el Pasaporte como tab inicial
+  return <MiniPayPage />;
 }
