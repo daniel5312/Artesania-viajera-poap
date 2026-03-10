@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createWalletClient, http, publicActions } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { celoSepolia } from "viem/chains";
+//import { celoSepolia } from "viem/chains";
+import { celo } from "viem/chains";
 import { PASSPORT_CONTRACT } from "@/constants/contracts";
 
 export const dynamic = 'force-dynamic';
@@ -23,9 +24,10 @@ export async function POST(request: Request) {
         const account = privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`);
         const client = createWalletClient({
             account,
-            chain: celoSepolia,
+            chain: celo,
             // 🟢 RPC OFICIAL DE CELO
-            transport: http("https://forno.celo-sepolia.celo-testnet.org")
+            //transport: http("https://forno.celo-sepolia.celo-testnet.org"
+            transport: http("https://forno.celo.org")
         }).extend(publicActions);
 
         const tokenURI = SELLOS_IPFS[pueblo];

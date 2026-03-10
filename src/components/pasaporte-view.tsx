@@ -3,36 +3,51 @@ import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { usePrivy } from "@privy-io/react-auth";
 import { createPublicClient, http } from "viem";
-//import { celoSepolia } from "viem/chains";
 import { celo } from "viem/chains";
 import { PASSPORT_CONTRACT } from "@/constants/contracts";
-import { Loader2, X, ChevronLeft, ChevronRight, Stamp } from "lucide-react";
+import {
+  Loader2,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Stamp,
+  QrCode,
+} from "lucide-react";
 import { SelloDetalle } from "./sello-detalle";
 
 const MapaReal = dynamic(() => import("@/components/mapa"), { ssr: false });
 const publicClient = createPublicClient({
   chain: celo,
-  transport: http(),
+  transport: http("https://forno.celo.org"),
 });
+
+// 🟢 Configuración de los botones demo vinculados a tus IDs de Pinata/Pueblos
+const PUEBLOS_DEMO = [
+  { id: "guatape_socalos", name: "Guatapé" },
+  { id: "sombrillas_guatape", name: "Sombrillas" },
+];
 
 export function PasaporteView({
   onNavigate,
 }: {
   onNavigate?: (tab: any) => void;
 }) {
-  const { user, authenticated } = usePrivy();
+  const { user, authenticated, login } = usePrivy();
   const [selloSeleccionado, setSelloSeleccionado] = useState<any>(null);
   const [sellos, setSellos] = useState<any[]>([]);
   const [cargando, setCargando] = useState(false);
+  const [simulando, setSimulando] = useState<string | null>(null);
   const [paginaActual, setPaginaActual] = useState(1);
   const itemsPorPagina = 15;
 
   const leerPasaporte = useCallback(async () => {
     const walletAddress = user?.wallet?.address;
+    console.log("Wallet de Privy:", walletAddress);
     if (!authenticated || !walletAddress) return;
     setCargando(true);
     try {
-      const ids = Array.from({ length: 40 }, (_, i) => BigInt(i));
+      // 🟢 Tip: Buscamos hasta el ID 100 para no perdernos los de Mainnet
+      const ids = Array.from({ length: 100 }, (_, i) => BigInt(i));
       const owners = await publicClient.multicall({
         contracts: ids.map((id) => ({
           ...PASSPORT_CONTRACT,
@@ -47,6 +62,11 @@ export function PasaporteView({
           owners[i].status === "success" &&
           (owners[i].result as string).toLowerCase() ===
             walletAddress.toLowerCase(),
+      );
+
+      console.log(
+        "🟢 IDs encontrados para tu wallet:",
+        misIds.map((id) => id.toString()),
       );
 
       const uris = await publicClient.multicall({
@@ -72,6 +92,19 @@ export function PasaporteView({
               );
               const response = await fetch(url);
               if (!response.ok) return null;
+
+              // 🟢 EL FIX MAGISTRAL: Revisar si la respuesta es una imagen directa
+              const contentType = response.headers.get("content-type");
+              if (contentType && contentType.includes("image")) {
+                return {
+                  id: misIds[i].toString(),
+                  puebloId: "guatape_socalos", // Fallback por defecto
+                  name: `Sello #${misIds[i].toString()}`,
+                  image: url,
+                };
+              }
+
+              // Si no es imagen, asumimos que es JSON como dicta el estándar ERC-721
               const meta = await response.json();
               return {
                 ...meta,
@@ -83,6 +116,11 @@ export function PasaporteView({
                 ),
               };
             } catch (e) {
+              console.error(
+                "❌ Error procesando metadata del ID",
+                misIds[i].toString(),
+                e,
+              );
               return null;
             }
           }),
@@ -96,6 +134,30 @@ export function PasaporteView({
       setCargando(false);
     }
   }, [authenticated, user?.wallet?.address]);
+
+  // 🟢 Función para que los botones funcionen
+  const handleSimularMint = async (puebloId: string) => {
+    if (!authenticated) return login();
+    setSimulando(puebloId);
+    try {
+      const res = await fetch("/api/mint-passport", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipient: user?.wallet?.address,
+          pueblo: puebloId,
+        }),
+      });
+      if (res.ok) {
+        alert("¡Sello estampado con éxito!");
+        leerPasaporte();
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSimulando(null);
+    }
+  };
 
   useEffect(() => {
     leerPasaporte();
@@ -113,8 +175,26 @@ export function PasaporteView({
         <MapaReal />
       </div>
 
+      {/* 🟢 SECCIÓN DE BOTONES DEMO PARA JUECES */}
+      <div className="bg-primary/10 border border-dashed border-primary/30 rounded-[30px] p-4 flex flex-col gap-3">
+        <p className="text-[9px] font-black uppercase text-center text-primary flex items-center justify-center gap-2">
+          <QrCode size={12} /> Simular Escaneo en Pueblo
+        </p>
+        <div className="flex flex-wrap gap-2 justify-center">
+          {PUEBLOS_DEMO.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => handleSimularMint(p.id)}
+              disabled={simulando !== null}
+              className="text-[8px] bg-background border border-primary/20 px-3 py-1.5 rounded-full font-bold hover:bg-primary hover:text-white transition-all disabled:opacity-50"
+            >
+              {simulando === p.id ? "..." : p.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="flex flex-col gap-4">
-        {/* 🟢 CONTADOR DE NFTs RESTAURADO */}
         <div className="flex items-center justify-between bg-primary/10 p-3 rounded-2xl border border-primary/20">
           <span className="flex items-center gap-1 text-[10px] font-bold text-primary uppercase">
             <Stamp size={14} /> Sellos Coleccionados

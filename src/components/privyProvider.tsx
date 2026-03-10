@@ -2,7 +2,7 @@
 
 import { PrivyProvider } from "@privy-io/react-auth";
 import { WagmiProvider } from "@privy-io/wagmi";
-import { celoSepolia } from "viem/chains";
+import { celoSepolia, celo } from "viem/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { wagmiConfig } from "@/lib/Wagmi"; // Importación limpia
 
@@ -14,8 +14,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       appId="cmjkojeq70057l10b80nic7qk"
       config={{
         loginMethods: ["google", "email", "wallet"],
-        supportedChains: [celoSepolia],
-        defaultChain: celoSepolia,
+        supportedChains: [celo],
+        defaultChain: celo,
         externalWallets: {
           walletConnect: { enabled: true },
         },

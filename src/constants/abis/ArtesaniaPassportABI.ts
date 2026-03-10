@@ -1,4 +1,4 @@
-export const PASSPORT_ADDRESS = "0x86b6E480a423f49C4104EeAcC13c262263c24ee9" as const;
+export const PASSPORT_ADDRESS = "0xF62d9Ed4243c08C0191C62ac5dA9F77abC7559b5" as const;
 
 export const PASSPORT_ABI = [
     { inputs: [{ internalType: "address", name: "owner", type: "address" }], name: "balanceOf", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },

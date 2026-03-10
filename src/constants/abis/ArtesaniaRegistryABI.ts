@@ -1,5 +1,5 @@
 // 👉 CELO SEPOLIA (Testnet) 🔥 ACTIVA
-export const REGISTRY_ADDRESS = "0x16Fed618FEC87EC964f469705291207c248A736A" as const;
+export const REGISTRY_ADDRESS = "0x0879d58Fe38da42C9a4fBb24faF721A8A4e1CE08" as const;
 
 // 👉 CELO MAINNET (Producción)
 // export const ARTESANIA_CONTRACT_ADDRESS = "0x..." as const;
