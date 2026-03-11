@@ -17,7 +17,7 @@ import { usePrivy } from "@privy-io/react-auth";
 
 export function WalletHeader() {
   const [copied, setCopied] = useState(false);
-  const { isDarkMode, toggleDarkMode, lang, toggleLang } = useTheme();
+  const { isDarkMode, toggleTheme, lang, toggleLang } = useTheme();
 
   // 🟢 EL CEREBRO WEB3: Traemos todo de Privy
   const { login, logout, authenticated, user } = usePrivy();
@@ -55,7 +55,7 @@ export function WalletHeader() {
         </button>
 
         <button
-          onClick={toggleDarkMode}
+          onClick={toggleTheme}
           className="flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-card/60 text-muted-foreground backdrop-blur-sm transition-colors hover:border-primary/40 hover:text-foreground"
         >
           {isDarkMode ? (
