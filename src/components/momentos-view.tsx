@@ -1,119 +1,330 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
-import { Loader2 } from "lucide-react";
-import { useTheme } from "@/lib/theme-context";
-import { t } from "@/lib/i18n";
-import { createPublicClient, http } from "viem";
-//import { celoSepolia } from "viem/chains";
+import { useState, useRef } from "react";
+import {
+  Camera,
+  Loader2,
+  CheckCircle2,
+  Globe,
+  Image as ImageIcon,
+  X,
+} from "lucide-react";
+import {
+  useAccount,
+  useWriteContract,
+  useReadContract,
+  useWaitForTransactionReceipt,
+  useSwitchChain,
+} from "wagmi";
+import { parseAbi } from "viem";
 import { celo } from "viem/chains";
+import imageCompression from "browser-image-compression";
 import { REGISTRY_CONTRACT } from "@/constants/contracts";
+import { ImageModal } from "./image-modal";
 
-const publicClient = createPublicClient({
-  chain: celo,
-  transport: http(),
-});
-const PUEBLOS_IDS = [
-  "guatape_socalos",
-  "sombrillas_guatape",
-  "jardin_cafe",
-  "envigado_verde",
-  "jerico_cuero",
-  "mompox_filigrana",
-  "santafe_colonial",
-];
+export function MomentosView({
+  selectedSello,
+  onNavigate,
+}: {
+  selectedSello: any;
+  onNavigate?: (t: any) => void;
+}) {
+  const { address } = useAccount();
+  const { switchChainAsync } = useSwitchChain();
 
-export function MomentosView() {
-  const { lang } = useTheme();
-  const [momentosReales, setMomentosReales] = useState<any[]>([]);
-  const [cargando, setCargando] = useState(false);
+  // Estados
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [procesando, setProcesando] = useState(false);
+  const [fotosLocales, setFotosLocales] = useState<string[]>([]);
+  const [imagenAmpliada, setImagenAmpliada] = useState<string | null>(null);
 
-  const leerMomentos = useCallback(async () => {
-    setCargando(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 🟢 1. LECTURA SEGURA (Usando el ABI perfecto de tu contracts.ts)
+  const { data: muralData } = useReadContract({
+    address: REGISTRY_CONTRACT.address,
+    abi: REGISTRY_CONTRACT.abi, // ¡Llamamos directo a tu obra maestra!
+    functionName: "obtenerMural",
+    args: selectedSello ? [selectedSello.puebloId] : [""],
+    query: { enabled: !!selectedSello },
+  });
+
+  // 🟢 2. CONVERSIÓN Y FILTRO (Solo tus fotos, sin crasheos)
+  const fotosHistoricas = ((muralData as any[]) || [])
+    .filter((item) => {
+      if (!item || !item.autor) return false;
+      return address && item.autor.toLowerCase() === address.toLowerCase();
+    })
+    .map((item) => {
+      const cid = item.cid;
+      if (!cid) return "";
+      return cid.startsWith("http")
+        ? cid
+        : `https://gateway.pinata.cloud/ipfs/${cid.replace("ipfs://", "")}`;
+    })
+    .filter((url) => url !== "");
+
+  // 🟢 3. UNIÓN DE FOTOS
+  const todasLasFotos = [...fotosLocales, ...fotosHistoricas];
+
+  const { data: hash, writeContract, isPending } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+    useWaitForTransactionReceipt({ hash });
+
+  const base64ToFile = (base64: string, filename: string) => {
+    const arr = base64.split(",");
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) u8arr[n] = bstr.charCodeAt(n);
+    return new File([u8arr], filename, { type: "image/jpeg" });
+  };
+
+  const handleGuardarMomento = async () => {
+    if (!address) return alert("🚨 Billetera no conectada.");
+    if (!fotoPreview) return alert("📸 Selecciona una foto.");
+    setProcesando(true);
     try {
-      let todos: any[] = [];
-      const gateway =
-        process.env.NEXT_PUBLIC_GATEWAY_URL || "gateway.pinata.cloud";
+      await switchChainAsync({ chainId: celo.id });
+      const imageFile = base64ToFile(fotoPreview, "momento.jpg");
+      const compressedFile = await imageCompression(imageFile, {
+        maxSizeMB: 0.8,
+        maxWidthOrHeight: 1200,
+      });
 
-      for (const id of PUEBLOS_IDS) {
-        try {
-          const mural = (await publicClient.readContract({
-            ...REGISTRY_CONTRACT,
-            functionName: "obtenerMural",
-            args: [id],
-          })) as any[];
+      const formData = new FormData();
+      formData.append("file", compressedFile);
+      const res = await fetch("/api/upload-moment", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
 
-          if (mural) {
-            // 🟢 AQUÍ ESTÁ LA CORRECCIÓN PARA LAS FOTOS ROTAS
-            todos.push(
-              ...mural.map((m) => {
-                let urlLimpia = m.cid;
-                if (urlLimpia.startsWith("ipfs://")) {
-                  urlLimpia = urlLimpia.replace(
-                    "ipfs://",
-                    `https://${gateway}/ipfs/`,
-                  );
-                } else if (!urlLimpia.startsWith("http")) {
-                  // Si viene el hash crudo como Qm...
-                  urlLimpia = `https://${gateway}/ipfs/${urlLimpia}`;
-                }
-                return {
-                  url: urlLimpia,
-                  pueblo: id,
-                };
-              }),
-            );
-          }
-        } catch (e) {}
-      }
-      setMomentosReales(todos.reverse());
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setCargando(false);
+      writeContract({
+        address: REGISTRY_CONTRACT.address,
+        abi: parseAbi([
+          "function registrarMomento(string _puebloId, string _cid)",
+        ]),
+        functionName: "registrarMomento",
+        args: [selectedSello.puebloId, data.ipfsUrl],
+      });
+    } catch (error: any) {
+      alert(error.message || "Error técnico");
+      setProcesando(false);
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    leerMomentos();
-  }, [leerMomentos]);
+  const isWorking = procesando || isPending || isConfirming;
+
+  const handleCerrarModal = () => {
+    if (isConfirmed && fotoPreview) {
+      setFotosLocales((prev) => [fotoPreview, ...prev]);
+    }
+    setIsModalOpen(false);
+    setTimeout(() => {
+      if (!isConfirmed) setFotoPreview(null);
+      setProcesando(false);
+    }, 500);
+  };
+
+  if (!selectedSello) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 text-center opacity-60">
+        <ImageIcon size={60} className="mb-4 text-primary" />
+        <h3 className="font-bold text-lg text-primary">
+          Aún no hay sello seleccionado
+        </h3>
+        <button
+          onClick={() => onNavigate?.("pasaporte")}
+          className="mt-6 px-6 py-2 bg-primary text-white rounded-full text-xs font-bold shadow-lg hover:bg-primary/80 transition-colors"
+        >
+          Ir al Pasaporte
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-4 px-5 pb-24">
-      <div className="flex items-center justify-between bg-primary/10 p-3 rounded-2xl border border-primary/20">
-        <span className="text-[10px] font-bold text-primary uppercase">
-          Mural Celo Sepolia
-        </span>
-        <span className="text-xs font-medium text-foreground">
-          {cargando ? (
-            <Loader2 className="w-3 h-3 animate-spin text-primary" />
-          ) : (
-            `${momentosReales.length} Fotos`
-          )}
-        </span>
+    <div className="flex flex-col gap-6 relative pb-36">
+      {/* VISUALIZADOR DE IMÁGENES A PANTALLA COMPLETA */}
+      <ImageModal
+        src={imagenAmpliada}
+        onClose={() => setImagenAmpliada(null)}
+      />
+
+      {/* 1. SELLO GIGANTE (Click para ampliar) */}
+      <div className="flex flex-col items-center justify-center pt-6 pb-2">
+        <div
+          className="relative cursor-pointer hover:scale-105 transition-transform"
+          onClick={() => setImagenAmpliada(selectedSello.image)}
+        >
+          <div className="absolute -inset-4 bg-linear-to-tr from-purple-500/20 to-amber-500/20 rounded-[3rem] blur-2xl animate-pulse" />
+          <img
+            src={selectedSello.image}
+            className="relative w-40 h-40 .rounded-[2rem] object-cover .border-[4px] border-card shadow-2xl"
+            alt={selectedSello.name}
+          />
+        </div>
+        <h2 className="text-3xl font-black text-foreground leading-none mt-6 text-center tracking-tighter">
+          {selectedSello.name}
+        </h2>
+        <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-bold mt-2 text-center">
+          Álbum de Momentos
+        </p>
       </div>
-      <div>
-        <h2 className="text-base font-semibold">{t(lang, "momentos.title")}</h2>
+
+      {/* 2. ÁLBUM PERSONAL */}
+      <div className="px-2">
+        <div className="grid grid-cols-3 gap-3">
+          {/* BOTÓN PARA ABRIR CÁMARA */}
+          <button
+            onClick={() => {
+              setFotoPreview(null);
+              setIsModalOpen(true);
+            }}
+            className="aspect-square flex flex-col items-center justify-center bg-primary/10 hover:bg-primary/20 border-2 border-dashed border-primary/40 rounded-2xl transition-all active:scale-95 shadow-inner"
+          >
+            <Camera className="text-primary mb-1" size={24} />
+            <span className="text-[8px] font-black uppercase text-primary text-center px-1">
+              Subir Foto
+            </span>
+          </button>
+
+          {/* 🟢 4. AQUÍ SE DIBUJAN TODAS LAS FOTOS (Las viejas y las nuevas) */}
+          {todasLasFotos.map((foto, idx) => (
+            <div
+              key={idx}
+              onClick={() => setImagenAmpliada(foto)}
+              className="relative aspect-square rounded-2xl overflow-hidden border border-primary/20 shadow-md cursor-pointer hover:opacity-90 transition-opacity"
+            >
+              <img
+                src={foto}
+                className="w-full h-full object-cover"
+                alt="Momento"
+              />
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="flex flex-col gap-4 mt-2">
-        {cargando ? (
-          <div className="flex justify-center py-10">
-            <Loader2 className="animate-spin text-primary w-8 h-8" />
-          </div>
-        ) : momentosReales.length === 0 ? (
-          <p className="text-center text-xs">Aún no hay fotos.</p>
-        ) : (
-          <div className="grid grid-cols-3 gap-2">
-            {momentosReales.map((m, i) => (
+
+      {/* 3. BOTÓN HACIA LA COMUNIDAD */}
+      <div className="px-2 mt-4">
+        <button
+          onClick={() => onNavigate?.("comunidad")}
+          className="w-full flex items-center justify-center gap-2 py-4 bg-primary/5 hover:bg-primary/10 text-primary border border-primary/20 rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-sm"
+        >
+          <Globe size={18} /> Explorar Mural del Pueblo
+        </button>
+      </div>
+
+      {/* 4. MODAL FLOTANTE DE LA CÁMARA */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-md px-4 animate-in fade-in duration-200 py-6">
+          <div className="w-full max-w-sm bg-card/90 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl border border-primary/20 flex flex-col max-h-[95vh] overflow-y-auto animate-in zoom-in-95 duration-300">
+            <div className="flex justify-between items-center p-5 pb-2 sticky top-0 bg-card/80 backdrop-blur-md z-10">
+              <h3 className="font-black text-primary text-sm uppercase tracking-widest">
+                Nuevo Momento
+              </h3>
+              {!isWorking && (
+                <button
+                  onClick={handleCerrarModal}
+                  className="p-2 bg-primary/10 hover:bg-primary/20 rounded-full text-primary transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              )}
+            </div>
+
+            <div className="p-5 flex flex-col gap-4">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                      if (ev.target?.result)
+                        setFotoPreview(ev.target.result as string);
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+              />
+
               <div
-                key={i}
-                className="aspect-square rounded-xl overflow-hidden bg-card border border-primary/20"
+                onClick={() =>
+                  !isWorking && !isConfirmed && fileInputRef.current?.click()
+                }
+                className={`relative .aspect-[3/2] w-full mx-auto rounded-3xl overflow-hidden shadow-inner flex items-center justify-center transition-all shrink-0 ${!fotoPreview ? "bg-primary/5 border-2 border-dashed border-primary/30 cursor-pointer hover:bg-primary/10" : "border border-primary/20"}`}
               >
-                <img src={m.url} className="w-full h-full object-cover" />
+                {fotoPreview ? (
+                  <>
+                    <img
+                      src={fotoPreview}
+                      className="w-full h-full object-cover"
+                      alt="Preview"
+                    />
+                    {isWorking && (
+                      <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex flex-col items-center justify-center">
+                        <Loader2
+                          className="animate-spin text-primary mb-2"
+                          size={32}
+                        />
+                        <span className="text-xs font-bold uppercase text-primary">
+                          Procesando...
+                        </span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center text-primary/50">
+                    <Camera size={48} className="mb-2" />
+                    <span className="text-[10px] font-black uppercase tracking-widest px-4 text-center">
+                      Toca para abrir <br /> la cámara
+                    </span>
+                  </div>
+                )}
               </div>
-            ))}
+
+              <div className="pb-2">
+                {!isConfirmed ? (
+                  <button
+                    onClick={handleGuardarMomento}
+                    disabled={!fotoPreview || isWorking}
+                    className="w-full .bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 rounded-2xl font-black text-xs uppercase shadow-xl shadow-purple-500/20 disabled:opacity-50 flex justify-center gap-2 items-center active:scale-95 transition-all shrink-0"
+                  >
+                    {isWorking ? (
+                      <Loader2 className="animate-spin" size={18} />
+                    ) : (
+                      "🚀 Subir a la Blockchain"
+                    )}
+                  </button>
+                ) : (
+                  <div className="flex flex-col gap-3 animate-in slide-in-from-bottom-4 shrink-0">
+                    <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-2xl text-center flex items-center justify-center gap-2">
+                      <CheckCircle2 size={18} className="text-green-500" />
+                      <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">
+                        ¡Momento Inmortalizado!
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleCerrarModal}
+                      className="w-full bg-card border border-primary/20 text-primary py-4 rounded-2xl font-black text-xs uppercase shadow-md flex justify-center items-center active:scale-95 transition-all"
+                    >
+                      Cerrar y ver Álbum
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

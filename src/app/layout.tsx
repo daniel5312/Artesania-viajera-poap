@@ -18,7 +18,7 @@ export default function RootLayout({
       />
       <body>
         <Providers>
-          <Navbar />
+          {/*<Navbar />*/}
           <FarcasterLoader />
           {children}
         </Providers>

@@ -1,11 +1,11 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { Loader2, Users, MapPin } from "lucide-react";
+import { Loader2, Users } from "lucide-react";
 import { useTheme } from "@/lib/theme-context";
 import { createPublicClient, http } from "viem";
-//import { celoSepolia } from "viem/chains";
 import { celo } from "viem/chains";
 import { REGISTRY_CONTRACT } from "@/constants/contracts";
+import { ImageModal } from "./image-modal"; // 🟢 Importamos el visualizador
 
 const publicClient = createPublicClient({
   chain: celo,
@@ -28,6 +28,9 @@ export function ComunidadView() {
   const [momentosGlobales, setMomentosGlobales] = useState<any[]>([]);
   const [cargando, setCargando] = useState(false);
   const [filtroActivo, setFiltroActivo] = useState("todos");
+
+  // 🟢 ESTADO PARA VER LA FOTO EN GRANDE
+  const [imagenAmpliada, setImagenAmpliada] = useState<string | null>(null);
 
   const leerMuralGlobal = useCallback(async () => {
     setCargando(true);
@@ -60,7 +63,9 @@ export function ComunidadView() {
               }),
             );
           }
-        } catch (e) {}
+        } catch (e) {
+          console.error(`Error leyendo pueblo ${id}:`, e);
+        }
       }
       setMomentosGlobales(todos.reverse());
     } catch (e) {
@@ -80,8 +85,15 @@ export function ComunidadView() {
       : momentosGlobales.filter((m) => m.pueblo === filtroActivo);
 
   return (
-    <div className="flex flex-col gap-5 px-4 pb-24">
-      <div className="flex items-center justify-between bg-gradien-to-r from-accent/20 to-primary/10 p-4 rounded-3xl border border-white/10 shadow-sm backdrop-blur-md">
+    <div className="flex flex-col gap-5 px-4 pb-24 relative">
+      {/* 🟢 VISUALIZADOR A PANTALLA COMPLETA */}
+      <ImageModal
+        src={imagenAmpliada}
+        onClose={() => setImagenAmpliada(null)}
+      />
+
+      {/* Cabecera */}
+      <div className="flex items-center justify-between bg-linear-to-r from-accent/20 to-primary/10 p-4 rounded-3xl border border-white/10 shadow-sm backdrop-blur-md">
         <span className="flex items-center gap-2 text-xs font-black text-foreground uppercase tracking-widest">
           <Users size={16} className="text-accent" /> Red Phygital
         </span>
@@ -94,7 +106,7 @@ export function ComunidadView() {
         </span>
       </div>
 
-      {/* 🟢 Menú Scroll Horizontal Elegante */}
+      {/* Menú Scroll Horizontal */}
       <div className="flex gap-3 overflow-x-auto pb-4 pt-1 px-1 scrollbar-none snap-x">
         {PUEBLOS.map((p) => (
           <button
@@ -102,7 +114,7 @@ export function ComunidadView() {
             onClick={() => setFiltroActivo(p.id)}
             className={`shrink-0 snap-center px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all duration-300 ${
               filtroActivo === p.id
-                ? "bg-gradien-to-r from-primary to-accent text-white shadow-[0_4px_15px_rgba(129,98,243,0.4)] scale-105 border-transparent"
+                ? "bg-linear-to-r from-primary to-accent text-white shadow-[0_4px_15px_rgba(129,98,243,0.4)] scale-105 border-transparent"
                 : "bg-card/40 backdrop-blur-md border border-primary/20 text-muted-foreground hover:bg-primary/10"
             }`}
           >
@@ -111,7 +123,7 @@ export function ComunidadView() {
         ))}
       </div>
 
-      {/* Galería de Fotos (3 Columnas) */}
+      {/* Galería de Fotos */}
       <div className="flex flex-col gap-4">
         {cargando ? (
           <div className="flex justify-center py-10">
@@ -128,10 +140,16 @@ export function ComunidadView() {
             {fotosFiltradas.map((m, i) => (
               <div
                 key={i}
-                className="relative aspect-square rounded-xl overflow-hidden bg-card border border-primary/20 shadow-sm group"
+                // 🟢 Al hacer click, guardamos la URL en el estado para abrir el modal
+                onClick={() => setImagenAmpliada(m.url)}
+                className="relative aspect-square rounded-xl overflow-hidden bg-card border border-primary/20 shadow-sm active:scale-95 transition-transform cursor-pointer group"
               >
-                <img src={m.url} className="w-full h-full object-cover" />
-                <div className="absolute bottom-0 left-0 right-0 bg-gradien-to-t from-black/90 via-black/40 to-transparent p-2 pt-6">
+                <img
+                  src={m.url}
+                  className="w-full h-full object-cover"
+                  alt="Momento global"
+                />
+                <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/90 via-black/40 to-transparent p-2 pt-6">
                   <p className="text-[7px] font-mono text-white/90 truncate text-center">
                     {m.autor.slice(0, 4)}...{m.autor.slice(-4)}
                   </p>

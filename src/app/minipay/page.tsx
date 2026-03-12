@@ -19,6 +19,7 @@ import { LandingView } from "@/components/landing-view";
 type Tab = "pasaporte" | "tienda" | "comunidad" | "momentos";
 
 function AppShell() {
+  const [selectedSello, setSelectedSello] = useState<any | null>(null);
   const { login, authenticated } = usePrivy();
   const { wallets } = useWallets();
   const searchParams = useSearchParams();
@@ -35,20 +36,14 @@ function AppShell() {
   useEffect(() => {
     setMounted(true);
     if (sdk?.actions?.ready) sdk.actions.ready();
-    if (authenticated || selloPendiente) {
-      setShowLanding(false);
-    }
+    if (authenticated || selloPendiente) setShowLanding(false);
   }, [authenticated, selloPendiente]);
 
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    if (isDarkMode) document.documentElement.classList.add("dark");
+    else document.documentElement.classList.remove("dark");
   }, [isDarkMode]);
 
-  // 🪄 AUTO-MINT LOGIC (Sin cambios)
   useEffect(() => {
     const autoMint = async () => {
       if (
@@ -68,9 +63,9 @@ function AppShell() {
               tipo: `Sello ${selloPendiente}`,
             }),
           });
-          if (response.ok) alert(`¡Magia! 🪄 Sello añadido.`);
+          if (response.ok) alert(`¡Sello añadido!`);
         } catch (error) {
-          console.error("Error en auto-mint:", error);
+          console.error(error);
         } finally {
           setIsAutoMinting(false);
           router.replace("/", { scroll: false });
@@ -81,27 +76,18 @@ function AppShell() {
   }, [selloPendiente, authenticated, wallets, isAutoMinting, router]);
 
   if (!mounted) return null;
-
-  // --- RENDEREADO DE LA LANDING ---
-  if (showLanding && !selloPendiente) {
+  if (showLanding && !selloPendiente)
     return <LandingView onEnter={() => setShowLanding(false)} />;
-  }
 
-  // --- VISTA GLOBAL CON FONDO CYBER-ARTESANAL ---
   return (
     <div
-      className={`mx-auto min-h-screen max-w-md relative overflow-hidden transition-colors duration-500 
-      ${isDarkMode ? "bg-[#0F0A1F] text-white" : "bg-[#faf8f5] text-[#2D2D2D]"}`}
+      className={`mx-auto min-h-screen max-w-md relative overflow-hidden transition-colors duration-500 ${isDarkMode ? "bg-[#0F0A1F] text-white" : "bg-[#faf8f5] text-[#2D2D2D]"}`}
     >
-      {/* --- CAPA DE FONDO GLOBAL --- */}
       <div className="pointer-events-none fixed inset-0 z-0">
-        {/* Textura de tejido sutil */}
         <div
           className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/woven.png')] bg-repeat"
           style={{ backgroundSize: "400px" }}
         />
-
-        {/* Orbes Animados (Púrpuras y Verdes) */}
         <div
           className={`animate-orb-1 absolute -left-32 top-20 h-96 w-96 rounded-full blur-[80px] transition-colors duration-1000 ${isDarkMode ? "bg-purple-600/20" : "bg-[#4505A4]/10"}`}
         />
@@ -113,14 +99,10 @@ function AppShell() {
         />
       </div>
 
-      {/* --- CONTENIDO DE LA APP --- */}
       <div className="relative z-10 flex flex-col min-h-screen">
         <FarcasterLoader />
-
-        {/* El Header ahora debe ser transparente o glassmorphism */}
         <WalletHeader />
 
-        {/* Overlay de Carga */}
         {isAutoMinting && (
           <div className="absolute inset-0 z-50 bg-background/60 backdrop-blur-md flex flex-col items-center justify-center text-center p-6">
             <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
@@ -130,7 +112,6 @@ function AppShell() {
           </div>
         )}
 
-        {/* Alerta de Sello */}
         {selloPendiente && !authenticated && (
           <div className="mx-5 mt-4 p-4 rounded-2xl bg-primary/10 border border-primary/30 text-center animate-pulse z-20">
             <p className="text-sm font-bold text-primary mb-2">
@@ -147,17 +128,26 @@ function AppShell() {
 
         <main className="mt-2 pb-24 px-4 overflow-y-auto flex-1">
           {activeTab === "pasaporte" && (
-            <PasaporteView onNavigate={setActiveTab} />
+            <PasaporteView
+              onStampClick={(sello) => {
+                setSelectedSello(sello);
+                setActiveTab("momentos");
+              }}
+            />
+          )}
+          {activeTab === "momentos" && (
+            <MomentosView
+              selectedSello={selectedSello}
+              onNavigate={setActiveTab}
+            />
           )}
           {activeTab === "tienda" && <TiendaView />}
-          {activeTab === "momentos" && <MomentosView />}
           {activeTab === "comunidad" && <ComunidadView />}
         </main>
 
         <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
 
-      {/* --- KEYFRAMES DE ANIMACIÓN --- */}
       <style jsx global>{`
         @keyframes orb-float {
           0%,

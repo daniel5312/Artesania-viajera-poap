@@ -7,13 +7,11 @@ import { celo } from "viem/chains";
 import { PASSPORT_CONTRACT } from "@/constants/contracts";
 import {
   Loader2,
-  X,
   ChevronLeft,
   ChevronRight,
   Stamp,
   QrCode,
 } from "lucide-react";
-import { SelloDetalle } from "./sello-detalle";
 
 const MapaReal = dynamic(() => import("@/components/mapa"), { ssr: false });
 const publicClient = createPublicClient({
@@ -21,19 +19,17 @@ const publicClient = createPublicClient({
   transport: http("https://forno.celo.org"),
 });
 
-// 🟢 Configuración de los botones demo vinculados a tus IDs de Pinata/Pueblos
 const PUEBLOS_DEMO = [
   { id: "guatape_socalos", name: "Guatapé" },
   { id: "sombrillas_guatape", name: "Sombrillas" },
 ];
 
 export function PasaporteView({
-  onNavigate,
+  onStampClick,
 }: {
-  onNavigate?: (tab: any) => void;
+  onStampClick: (sello: any) => void;
 }) {
   const { user, authenticated, login } = usePrivy();
-  const [selloSeleccionado, setSelloSeleccionado] = useState<any>(null);
   const [sellos, setSellos] = useState<any[]>([]);
   const [cargando, setCargando] = useState(false);
   const [simulando, setSimulando] = useState<string | null>(null);
@@ -42,11 +38,9 @@ export function PasaporteView({
 
   const leerPasaporte = useCallback(async () => {
     const walletAddress = user?.wallet?.address;
-    console.log("Wallet de Privy:", walletAddress);
     if (!authenticated || !walletAddress) return;
     setCargando(true);
     try {
-      // 🟢 Tip: Buscamos hasta el ID 100 para no perdernos los de Mainnet
       const ids = Array.from({ length: 100 }, (_, i) => BigInt(i));
       const owners = await publicClient.multicall({
         contracts: ids.map((id) => ({
@@ -62,11 +56,6 @@ export function PasaporteView({
           owners[i].status === "success" &&
           (owners[i].result as string).toLowerCase() ===
             walletAddress.toLowerCase(),
-      );
-
-      console.log(
-        "🟢 IDs encontrados para tu wallet:",
-        misIds.map((id) => id.toString()),
       );
 
       const uris = await publicClient.multicall({
@@ -93,18 +82,16 @@ export function PasaporteView({
               const response = await fetch(url);
               if (!response.ok) return null;
 
-              // 🟢 EL FIX MAGISTRAL: Revisar si la respuesta es una imagen directa
               const contentType = response.headers.get("content-type");
               if (contentType && contentType.includes("image")) {
                 return {
                   id: misIds[i].toString(),
-                  puebloId: "guatape_socalos", // Fallback por defecto
+                  puebloId: "guatape_socalos",
                   name: `Sello #${misIds[i].toString()}`,
                   image: url,
                 };
               }
 
-              // Si no es imagen, asumimos que es JSON como dicta el estándar ERC-721
               const meta = await response.json();
               return {
                 ...meta,
@@ -116,11 +103,6 @@ export function PasaporteView({
                 ),
               };
             } catch (e) {
-              console.error(
-                "❌ Error procesando metadata del ID",
-                misIds[i].toString(),
-                e,
-              );
               return null;
             }
           }),
@@ -135,7 +117,6 @@ export function PasaporteView({
     }
   }, [authenticated, user?.wallet?.address]);
 
-  // 🟢 Función para que los botones funcionen
   const handleSimularMint = async (puebloId: string) => {
     if (!authenticated) return login();
     setSimulando(puebloId);
@@ -170,12 +151,11 @@ export function PasaporteView({
   );
 
   return (
-    <div className="flex flex-col gap-6 px-5 pb-24 relative">
+    <div className="flex flex-col gap-6 px-1 relative">
       <div className="h-60 w-full overflow-hidden rounded-[40px] border-4 border-card shadow-2xl z-0">
         <MapaReal />
       </div>
 
-      {/* 🟢 SECCIÓN DE BOTONES DEMO PARA JUECES */}
       <div className="bg-primary/10 border border-dashed border-primary/30 rounded-[30px] p-4 flex flex-col gap-3">
         <p className="text-[9px] font-black uppercase text-center text-primary flex items-center justify-center gap-2">
           <QrCode size={12} /> Simular Escaneo en Pueblo
@@ -222,7 +202,7 @@ export function PasaporteView({
               {sellosMostrados.map((s) => (
                 <div
                   key={s.id}
-                  onClick={() => setSelloSeleccionado(s)}
+                  onClick={() => onStampClick(s)}
                   className="bg-card rounded-xl overflow-hidden shadow-sm active:scale-95 cursor-pointer border border-primary/20 relative aspect-square group"
                 >
                   <img
@@ -265,28 +245,6 @@ export function PasaporteView({
           </>
         )}
       </div>
-
-      {selloSeleccionado && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/80 backdrop-blur-sm sm:items-center">
-          <div className="w-full max-w-md bg-card rounded-t-[40px] sm:rounded-[40px] shadow-2xl border border-primary/20 overflow-hidden animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95">
-            <div className="flex justify-end p-4 pb-0">
-              <button
-                onClick={() => setSelloSeleccionado(null)}
-                className="p-2 bg-primary/10 rounded-full text-primary hover:bg-primary/20"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="px-5 pb-10">
-              <SelloDetalle
-                sello={selloSeleccionado}
-                onBack={() => setSelloSeleccionado(null)}
-                onNavigate={onNavigate}
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
