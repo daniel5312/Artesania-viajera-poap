@@ -14,16 +14,34 @@ import {
 import { useTheme } from "@/lib/theme-context";
 import { t } from "@/lib/i18n";
 import { usePrivy } from "@privy-io/react-auth";
+// 🟢 Importamos Hooks de Wagmi y Navigation
+import { useAccount, useDisconnect } from "wagmi";
+import { usePathname } from "next/navigation";
 
 export function WalletHeader() {
   const [copied, setCopied] = useState(false);
   const { isDarkMode, toggleTheme, lang, toggleLang } = useTheme();
+  const pathname = usePathname();
 
-  // 🟢 EL CEREBRO WEB3: Traemos todo de Privy
-  const { login, logout, authenticated, user } = usePrivy();
-  const walletAddress = user?.wallet?.address as string;
+  // 🟢 DETECTOR DE RUTA: ¿Estamos en MiniPay?
+  const isMiniPayRoute = pathname?.includes("/minipay");
 
-  // Mostrar solo los primeros 6 y últimos 4 caracteres de la wallet
+  // 🟢 DATOS DE PRIVY (Para Vercel/Web normal)
+  const {
+    login,
+    logout: logoutPrivy,
+    authenticated: authPrivy,
+    user,
+  } = usePrivy();
+
+  // 🟢 DATOS DE WAGMI (Para MiniPay)
+  const { address: wagmiAddress, isConnected: authWagmi } = useAccount();
+  const { disconnect: disconnectWagmi } = useDisconnect();
+
+  // 🟢 LÓGICA HÍBRIDA: Elegimos qué mostrar según la ruta
+  const authenticated = isMiniPayRoute ? authWagmi : authPrivy;
+  const walletAddress = isMiniPayRoute ? wagmiAddress : user?.wallet?.address;
+
   const shortAddress = walletAddress
     ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
     : "";
@@ -33,6 +51,11 @@ export function WalletHeader() {
     navigator.clipboard.writeText(walletAddress);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  function handleLogout() {
+    if (isMiniPayRoute) disconnectWagmi();
+    else logoutPrivy();
   }
 
   return (
@@ -65,7 +88,6 @@ export function WalletHeader() {
           )}
         </button>
 
-        {/* 🟢 LA LÓGICA DE LOGIN / LOGOUT */}
         {authenticated ? (
           <div className="flex items-center gap-1">
             <button
@@ -81,7 +103,7 @@ export function WalletHeader() {
               )}
             </button>
             <button
-              onClick={logout}
+              onClick={handleLogout}
               className="p-1.5 text-red-400 hover:text-red-500 transition-colors"
               title="Cerrar sesión"
             >
@@ -89,13 +111,17 @@ export function WalletHeader() {
             </button>
           </div>
         ) : (
-          <button
-            onClick={login}
-            className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-primary-foreground shadow-md transition-transform active:scale-95"
-          >
-            <LogIn className="h-3.5 w-3.5" />
-            Conectar
-          </button>
+          /* 🟢 MAGIA FINAL: En MiniPay no renderizamos el botón si no está conectado, 
+             porque useAutoConnect hará el trabajo en el fondo. */
+          !isMiniPayRoute && (
+            <button
+              onClick={login}
+              className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-primary-foreground shadow-md transition-transform active:scale-95"
+            >
+              <LogIn className="h-3.5 w-3.5" />
+              Conectar
+            </button>
+          )
         )}
       </div>
     </header>

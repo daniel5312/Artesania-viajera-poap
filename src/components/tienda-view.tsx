@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
-import { useSendTransaction, useSwitchChain } from "wagmi";
+import {
+  useSendTransaction,
+  useSwitchChain,
+  useWaitForTransactionReceipt,
+} from "wagmi";
 import { parseEther, getAddress } from "viem";
 import { celo } from "viem/chains";
 import { useTheme } from "@/lib/theme-context";
@@ -78,9 +82,86 @@ export function TiendaView() {
   const [paying, setPaying] = useState<number | null>(null);
   const [paid, setPaid] = useState<Set<number>>(new Set());
   const [imagenAmpliada, setImagenAmpliada] = useState<string | null>(null);
+  const [paymentHash, setPaymentHash] = useState<`0x${string}` | undefined>();
+  const [pendingProduct, setPendingProduct] = useState<
+    | {
+        id: number;
+        puebloId: string;
+        recipient: string;
+      }
+    | null
+  >(null);
+
+  const {
+    isLoading: isConfirmingPayment,
+    isSuccess: isPaymentConfirmed,
+    isError: isPaymentFailed,
+  } = useWaitForTransactionReceipt({
+    hash: paymentHash,
+  });
+
+  useEffect(() => {
+    if (!isPaymentFailed) return;
+
+    setPaying(null);
+    setPaymentHash(undefined);
+    setPendingProduct(null);
+    alert("El pago no se confirmó en Celo. Inténtalo de nuevo.");
+  }, [isPaymentFailed]);
+
+  useEffect(() => {
+    if (!isPaymentConfirmed || !pendingProduct) return;
+
+    let cancelled = false;
+
+    const mintPassport = async () => {
+      try {
+        const res = await fetch("/api/mint-passport", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            recipient: pendingProduct.recipient,
+            pueblo: pendingProduct.puebloId,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || "No se pudo mintear el sello.");
+        }
+
+        if (cancelled) return;
+
+        setPaid((prev) => new Set(prev).add(pendingProduct.id));
+        alert("¡Gracias por apoyar al artesano! Tu NFT ha sido enviado.");
+      } catch (error: any) {
+        if (cancelled) return;
+        alert(error.message || "El pago salió, pero el NFT no se pudo mintear.");
+      } finally {
+        if (cancelled) return;
+
+        setPaying(null);
+        setPaymentHash(undefined);
+        setPendingProduct(null);
+      }
+    };
+
+    void mintPassport();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isPaymentConfirmed, pendingProduct]);
 
   async function handlePay(product: (typeof NFT_PRODUCTS)[0]) {
     if (!authenticated) return login();
+
+    const recipient = user?.wallet?.address;
+    if (!recipient) {
+      alert("Conecta una wallet válida en Privy antes de comprar.");
+      return;
+    }
+
     setPaying(product.id);
 
     try {
@@ -89,33 +170,25 @@ export function TiendaView() {
       } catch (e) {
         console.log("Ya en Celo Mainnet o usuario canceló switch");
       }
+
       const tx = await sendTransactionAsync({
         to: getAddress(product.wallet),
         value: parseEther(product.price),
       });
-
-      const res = await fetch("/api/mint-passport", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          recipient: user?.wallet?.address,
-          pueblo: product.puebloId,
-        }),
+      setPendingProduct({
+        id: product.id,
+        puebloId: product.puebloId,
+        recipient,
       });
-
-      if (res.ok) {
-        setPaid((prev) => new Set(prev).add(product.id));
-        alert(
-          "¡Gracias por apoyar al artesano! Tu sello ya está en el pasaporte.",
-        );
-      }
+      setPaymentHash(tx);
     } catch (error: any) {
+      setPaying(null);
+      setPaymentHash(undefined);
+      setPendingProduct(null);
       alert(
         error.shortMessage ||
           "La transacción falló. Asegúrate de tener saldo en CELO real y estar en Celo Mainnet.",
       );
-    } finally {
-      setPaying(null);
     }
   }
 
@@ -182,10 +255,12 @@ export function TiendaView() {
               </span>
               <button
                 onClick={() => handlePay(nft)}
-                disabled={paying !== null || paid.has(nft.id)}
+                disabled={
+                  paying !== null || isConfirmingPayment || paid.has(nft.id)
+                }
                 className={`mt-2 w-full py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 active:scale-95 ${paid.has(nft.id) ? "bg-green-500/10 text-green-500 border border-green-500/20" : "bg-primary text-white shadow-md hover:bg-primary/90"}`}
               >
-                {paying === nft.id ? (
+                {paying === nft.id || isConfirmingPayment ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
                 ) : paid.has(nft.id) ? (
                   "Mío"
