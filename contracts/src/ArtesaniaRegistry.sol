@@ -1,49 +1,43 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.28;
 
-/**
- * @dev Interfaz para conectar con tu contrato de Pasaporte existente.
- * Esto nos permite verificar si el usuario tiene el NFT antes de dejarlo publicar.
- */
 interface IArtesaniaPassport {
     function balanceOf(address owner) external view returns (uint256);
 }
 
 /**
  * @title ArtesaniaRegistry
- * @author Daniel - Biota / Artesanía Viajera
- * @notice Registro descentralizado para el muro de momentos (Social Store).
+ * @author Daniel - Artesanía Viajera
+ * @notice Optimizado para Gas: Storage Packing y Calldata.
  */
 contract ArtesaniaRegistry {
-    // --- Errores Personalizados (Ahorro de gas) ---
-    error SoloMiembrosPuedenPublicar(); // No es el artesano ni tiene el NFT
+    error SoloMiembrosPuedenPublicar();
     error DatosInvalidos();
 
-    // --- Variables de Estado ---
+    // Inmutables: Se guardan en el código, no en el storage (Gas = 0)
     address public immutable i_artesano;
     IArtesaniaPassport public immutable i_passport;
 
+    // --- STORAGE PACKING ---
+    // Agrupamos variables pequeñas para que vivan en un solo slot de 32 bytes.
     struct Contenido {
-        string cid; // El link de Pinata/IPFS
-        address autor; // Quién subió la foto
-        uint256 fecha; // Cuándo se subió
-        bool esArtesano; // Diferencia tus fotos oficiales de las de los turistas
+        address autor; // 20 bytes
+        uint40 fecha; // 5 bytes (Suficiente para los próximos 30,000 años)
+        bool esArtesano; // 1 byte
+        // Total: 26 bytes. Solidity los empaqueta juntos.
+        string cid; // El string vive en un slot separado (dinámico)
     }
 
-    // Mapeo: ID del Pueblo => Lista de Momentos
-    mapping(string => Contenido[]) private s_murales;
+    // Usar bytes32 es mucho más barato que usar strings para las llaves del mapping
+    mapping(bytes32 => Contenido[]) private s_murales;
 
-    // Evento para que el mapa y la web se actualicen al instante
     event NuevoMomento(
-        string indexed puebloId,
+        bytes32 indexed puebloId,
         address indexed autor,
         bool esArtesano,
         string cid
     );
 
-    /**
-     * @param _passportAddress Dirección del contrato ArtesaniaPassport desplegado.
-     */
     constructor(address _passportAddress) {
         if (_passportAddress == address(0)) revert DatosInvalidos();
         i_artesano = msg.sender;
@@ -51,43 +45,43 @@ contract ArtesaniaRegistry {
     }
 
     /**
-     * @notice Registra un momento en el muro de un pueblo.
-     * @param _puebloId Identificador (ej: "guatape_socalos").
-     * @param _cid Hash de IPFS de la foto.
+     * @notice Registra un momento. El Robot paga el gas, el Turista es el dueño.
+     * @param _puebloId ID en bytes32 (Ahorra gas en el hashing)
+     * @param _cid Hash de IPFS
+     * @param _viajero Dirección real del turista (Address recolectada por Privy)
      */
     function registrarMomento(
-        string calldata _puebloId,
-        string calldata _cid
+        bytes32 _puebloId,
+        string calldata _cid,
+        address _viajero
     ) external {
-        bool esElArtesano = (msg.sender == i_artesano);
+        // Cacheamos en memoria para ahorrar lecturas de storage (SLOAD)
+        address artesano = i_artesano;
+        bool esElArtesano = (msg.sender == artesano);
 
-        // 🛡️ SEGURIDAD: Solo tú o alguien con al menos 1 NFT puede publicar.
-        if (!esElArtesano && i_passport.balanceOf(msg.sender) == 0) {
+        // 🛡️ Seguridad: Revisamos el balance del VIAJERO real
+        if (!esElArtesano && i_passport.balanceOf(_viajero) == 0) {
             revert SoloMiembrosPuedenPublicar();
         }
 
-        // Validación básica de strings
-        if (bytes(_puebloId).length == 0 || bytes(_cid).length == 0)
+        if (_puebloId == bytes32(0) || bytes(_cid).length == 0)
             revert DatosInvalidos();
 
-        // Guardamos el momento en la blockchain
+        // Guardado en un solo paso de storage packing
         s_murales[_puebloId].push(
             Contenido({
-                cid: _cid,
-                autor: msg.sender,
-                fecha: block.timestamp,
-                esArtesano: esElArtesano
+                autor: _viajero,
+                fecha: uint40(block.timestamp),
+                esArtesano: esElArtesano,
+                cid: _cid
             })
         );
 
-        emit NuevoMomento(_puebloId, msg.sender, esElArtesano, _cid);
+        emit NuevoMomento(_puebloId, _viajero, esElArtesano, _cid);
     }
 
-    /**
-     * @notice Devuelve todos los momentos de un pueblo específico.
-     */
     function obtenerMural(
-        string calldata _puebloId
+        bytes32 _puebloId
     ) external view returns (Contenido[] memory) {
         return s_murales[_puebloId];
     }

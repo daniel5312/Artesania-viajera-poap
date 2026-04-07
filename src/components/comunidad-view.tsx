@@ -1,16 +1,19 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { Loader2, Users } from "lucide-react";
+import { Loader2, Users, MapPin } from "lucide-react";
 import { useTheme } from "@/lib/theme-context";
-import { createPublicClient, http } from "viem";
+import { createPublicClient, http, stringToHex, pad } from "viem"; // 🟢 1. Importar conversores de Viem
 import { celo } from "viem/chains";
 import { REGISTRY_CONTRACT } from "@/constants/contracts";
-import { ImageModal } from "./image-modal"; // 🟢 Importamos el visualizador
+import { ImageModal } from "./image-modal";
 
 const publicClient = createPublicClient({
   chain: celo,
-  transport: http(),
+  transport: http("https://forno.celo.org"),
 });
+
+// 🟢 2. Bajé la fecha un par de días para que veas tus pruebas recientes
+const LANZAMIENTO_TIMESTAMP = 1774656000; // 28 Mar 2026
 
 const PUEBLOS = [
   { id: "todos", nombre: "🌍 Todos" },
@@ -23,13 +26,15 @@ const PUEBLOS = [
 
 const PUEBLOS_IDS = PUEBLOS.filter((p) => p.id !== "todos").map((p) => p.id);
 
-export function ComunidadView() {
+export function ComunidadView({
+  initialPuebloId = "todos",
+}: {
+  initialPuebloId?: string;
+}) {
   const { lang } = useTheme();
   const [momentosGlobales, setMomentosGlobales] = useState<any[]>([]);
   const [cargando, setCargando] = useState(false);
-  const [filtroActivo, setFiltroActivo] = useState("todos");
-
-  // 🟢 ESTADO PARA VER LA FOTO EN GRANDE
+  const [filtroActivo, setFiltroActivo] = useState(initialPuebloId);
   const [imagenAmpliada, setImagenAmpliada] = useState<string | null>(null);
 
   const leerMuralGlobal = useCallback(async () => {
@@ -41,35 +46,36 @@ export function ComunidadView() {
 
       for (const id of PUEBLOS_IDS) {
         try {
+          // 🟢 3. Convertir el id a bytes32 antes de llamar al contrato
+          const puebloIdBytes = pad(stringToHex(id), { size: 32 });
+
           const mural = (await publicClient.readContract({
             ...REGISTRY_CONTRACT,
             functionName: "obtenerMural",
-            args: [id],
+            args: [puebloIdBytes], // 🟢 4. Mandamos el ID convertido
           })) as any[];
 
           if (mural) {
             todos.push(
-              ...mural.map((m) => {
-                let urlLimpia = m.cid;
-                if (urlLimpia.startsWith("ipfs://")) {
-                  urlLimpia = urlLimpia.replace(
-                    "ipfs://",
-                    `https://${gateway}/ipfs/`,
-                  );
-                } else if (!urlLimpia.startsWith("http")) {
-                  urlLimpia = `https://${gateway}/ipfs/${urlLimpia}`;
-                }
-                return { url: urlLimpia, pueblo: id, autor: m.autor };
-              }),
+              ...mural.map((m) => ({
+                url: m.cid.startsWith("ipfs://")
+                  ? m.cid.replace("ipfs://", `https://${gateway}/ipfs/`)
+                  : m.cid.startsWith("http")
+                    ? m.cid
+                    : `https://${gateway}/ipfs/${m.cid}`,
+                pueblo: id,
+                autor: m.autor,
+                fecha: Number(m.fecha),
+              })),
             );
           }
         } catch (e) {
-          console.error(`Error leyendo pueblo ${id}:`, e);
+          console.error(`Error leyendo ${id}:`, e);
         }
       }
-      setMomentosGlobales(todos.reverse());
+      setMomentosGlobales(todos.sort((a, b) => b.fecha - a.fecha));
     } catch (e) {
-      console.error(e);
+      console.error("Error global:", e);
     } finally {
       setCargando(false);
     }
@@ -79,84 +85,85 @@ export function ComunidadView() {
     leerMuralGlobal();
   }, [leerMuralGlobal]);
 
-  const fotosFiltradas =
-    filtroActivo === "todos"
-      ? momentosGlobales
-      : momentosGlobales.filter((m) => m.pueblo === filtroActivo);
+  const fotosFiltradas = (() => {
+    const base = momentosGlobales.filter(
+      (m) =>
+        m.fecha >= LANZAMIENTO_TIMESTAMP &&
+        (filtroActivo === "todos" || m.pueblo === filtroActivo),
+    );
+    // 🟢 5. QUITÉ EL MAP DE ÚNICOS: Así se ven todas las fotos de todos los usuarios
+    return base.slice(0, 12);
+  })();
 
   return (
     <div className="flex flex-col gap-5 px-4 pb-24 relative">
-      {/* 🟢 VISUALIZADOR A PANTALLA COMPLETA */}
       <ImageModal
         src={imagenAmpliada}
         onClose={() => setImagenAmpliada(null)}
       />
-
-      {/* Cabecera */}
-      <div className="flex items-center justify-between bg-linear-to-r from-accent/20 to-primary/10 p-4 rounded-3xl border border-white/10 shadow-sm backdrop-blur-md">
-        <span className="flex items-center gap-2 text-xs font-black text-foreground uppercase tracking-widest">
-          <Users size={16} className="text-accent" /> Red Phygital
-        </span>
-        <span className="text-xs font-bold text-muted-foreground bg-background/50 px-3 py-1 rounded-full">
+      <div className="flex items-center justify-between bg-card/40 p-4 rounded-3xl border border-primary/20 backdrop-blur-md">
+        <div className="flex flex-col">
+          <span className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest">
+            <Users size={14} /> Red Phygital
+          </span>
+          <span className="text-[9px] text-muted-foreground font-bold">
+            {filtroActivo === "todos"
+              ? "Global"
+              : PUEBLOS.find((p) => p.id === filtroActivo)?.nombre}
+          </span>
+        </div>
+        <div className="bg-primary/10 px-3 py-1 rounded-full">
           {cargando ? (
-            <Loader2 className="w-3 h-3 animate-spin text-accent" />
+            <Loader2 className="w-3 h-3 animate-spin text-primary" />
           ) : (
-            `${momentosGlobales.length} Fotos`
+            <span className="text-[10px] font-black text-primary">
+              {fotosFiltradas.length}
+            </span>
           )}
-        </span>
+        </div>
       </div>
-
-      {/* Menú Scroll Horizontal */}
-      <div className="flex gap-3 overflow-x-auto pb-4 pt-1 px-1 scrollbar-none snap-x">
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
         {PUEBLOS.map((p) => (
           <button
             key={p.id}
             onClick={() => setFiltroActivo(p.id)}
-            className={`shrink-0 snap-center px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all duration-300 ${
-              filtroActivo === p.id
-                ? "bg-linear-to-r from-primary to-accent text-white shadow-[0_4px_15px_rgba(129,98,243,0.4)] scale-105 border-transparent"
-                : "bg-card/40 backdrop-blur-md border border-primary/20 text-muted-foreground hover:bg-primary/10"
-            }`}
+            className={`shrink-0 px-5 py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-wider transition-all ${filtroActivo === p.id ? "bg-primary text-white shadow-lg scale-105" : "bg-card/40 border border-primary/10 text-muted-foreground"}`}
           >
             {p.nombre}
           </button>
         ))}
       </div>
-
-      {/* Galería de Fotos */}
-      <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-3 gap-2">
         {cargando ? (
-          <div className="flex justify-center py-10">
-            <Loader2 className="animate-spin text-accent w-8 h-8" />
+          <div className="col-span-3 flex justify-center py-20">
+            <Loader2 className="animate-spin text-primary" size={40} />
           </div>
         ) : fotosFiltradas.length === 0 ? (
-          <div className="text-center p-10 border-2 border-dashed border-primary/20 rounded-3xl bg-card/30">
-            <p className="text-xs text-muted-foreground">
-              Sé el primero en presumir tu artesanía aquí.
+          <div className="col-span-3 text-center p-12 border-2 border-dashed border-primary/10 rounded-2xl bg-primary/5">
+            <MapPin className="mx-auto mb-3 text-primary/30" size={32} />
+            <p className="text-[10px] font-bold text-muted-foreground uppercase">
+              Aún no hay momentos
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-2">
-            {fotosFiltradas.map((m, i) => (
-              <div
-                key={i}
-                // 🟢 Al hacer click, guardamos la URL en el estado para abrir el modal
-                onClick={() => setImagenAmpliada(m.url)}
-                className="relative aspect-square rounded-xl overflow-hidden bg-card border border-primary/20 shadow-sm active:scale-95 transition-transform cursor-pointer group"
-              >
-                <img
-                  src={m.url}
-                  className="w-full h-full object-cover"
-                  alt="Momento global"
-                />
-                <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/90 via-black/40 to-transparent p-2 pt-6">
-                  <p className="text-[7px] font-mono text-white/90 truncate text-center">
-                    {m.autor.slice(0, 4)}...{m.autor.slice(-4)}
-                  </p>
-                </div>
+          fotosFiltradas.map((m, i) => (
+            <div
+              key={i}
+              onClick={() => setImagenAmpliada(m.url)}
+              className="relative aspect-square rounded-2xl overflow-hidden bg-card border border-primary/10 active:scale-95 transition-all cursor-pointer shadow-sm"
+            >
+              <img
+                src={m.url}
+                className="w-full h-full object-cover"
+                alt="Comunidad"
+              />
+              <div className="absolute bottom-2 left-0 right-0 px-2 text-center bg-black/40 backdrop-blur-sm mx-1 rounded-lg">
+                <p className="text-[6px] font-mono text-white truncate uppercase">
+                  {m.autor.slice(0, 4)}...{m.autor.slice(-4)}
+                </p>
               </div>
-            ))}
-          </div>
+            </div>
+          ))
         )}
       </div>
     </div>

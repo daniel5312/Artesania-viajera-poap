@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
-import { createWalletClient, http, publicActions } from "viem";
+import { createWalletClient, http, publicActions, isAddress } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-//import { celoSepolia } from "viem/chains";
 import { celo } from "viem/chains";
 import { PASSPORT_CONTRACT } from "@/constants/contracts";
-
-export const dynamic = 'force-dynamic';
 
 const SELLOS_IPFS: Record<string, string> = {
     guatape_socalos: "https://gateway.pinata.cloud/ipfs/bafkreigqcbgkpmhml3zahydb7hq7gb373nhtjbssc4lko6su42l6tzrxf4",
@@ -14,45 +11,27 @@ const SELLOS_IPFS: Record<string, string> = {
 
 export async function POST(request: Request) {
     try {
-        const { recipient, pueblo } = await request.json();
+        const { recipient, puebloId } = await request.json();
+        if (!isAddress(recipient)) return NextResponse.json({ success: false, error: "Address inválida" }, { status: 400 });
 
-        if (!recipient || !pueblo || !SELLOS_IPFS[pueblo]) {
-            return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
-        }
+        const tokenURI = SELLOS_IPFS[puebloId];
+        if (!tokenURI) return NextResponse.json({ success: false, error: "Sello no encontrado" }, { status: 404 });
 
-        // 🟢 Configuración de Viem en el Backend
         const account = privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`);
-        const client = createWalletClient({
-            account,
-            chain: celo,
-            // 🟢 RPC OFICIAL DE CELO
-            //transport: http("https://forno.celo-sepolia.celo-testnet.org"
-            transport: http("https://forno.celo.org")
-        }).extend(publicActions);
+        const client = createWalletClient({ account, chain: celo, transport: http("https://forno.celo.org") }).extend(publicActions);
 
-        const tokenURI = SELLOS_IPFS[pueblo];
-
-        console.log(`Minteando para ${recipient}...`);
-
-        // Ejecución de la transacción con Viem
         const hash = await client.writeContract({
-            ...PASSPORT_CONTRACT,
-            functionName: 'mintMomento',
-            args: [recipient, tokenURI],
+            address: PASSPORT_CONTRACT.address as `0x${string}`,
+            abi: PASSPORT_CONTRACT.abi,
+            functionName: "mintMomento",
+            args: [recipient as `0x${string}`, tokenURI],
         });
 
-        return NextResponse.json({
-            success: true,
-            txHash: hash,
-            msg: `¡Sello de ${pueblo} entregado!`
-        });
-
+        return NextResponse.json({ success: true, txHash: hash });
     } catch (error: any) {
-        console.error("❌ Error en el minteo:", error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 }
-
 /*import { NextResponse } from "next/server";
 import { ethers } from "ethers";
 // 🟢 Ojo: Asegúrate de que esta ruta apunte al archivo abi.ts que creamos hoy

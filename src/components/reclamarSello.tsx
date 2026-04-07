@@ -1,10 +1,10 @@
 "use client";
 import { useState } from "react";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
-import { MapPin } from "lucide-react";
+import { usePrivy } from "@privy-io/react-auth"; // 🟢 Usamos usePrivy directamente
+import { MapPin, Loader2 } from "lucide-react";
 
 interface ReclamarSelloProps {
-  municipio: string;
+  municipio: string; // Debe ser "guatape_socalos" o "sombrillas_guatape" para que el Robot lo encuentre
   imagenSello: string;
 }
 
@@ -12,28 +12,33 @@ export default function ReclamarSello({
   municipio,
   imagenSello,
 }: ReclamarSelloProps) {
-  const { authenticated, login } = usePrivy();
-  const { wallets } = useWallets();
+  const { authenticated, login, user } = usePrivy(); // 🟢 Sacamos 'user' de aquí
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<"idle" | "minting" | "success">("idle");
 
   const reclamarNFT = async () => {
     if (!authenticated) return login();
 
-    const wallet = wallets[0];
-    if (!wallet) return alert("Por favor, conecta tu wallet primero.");
+    // 🟢 LA CLAVE: Sacamos la wallet directamente del usuario de Privy
+    const address = user?.wallet?.address;
+
+    if (!address) {
+      return alert(
+        "Error: No se encontró tu wallet de Privy. Intenta recargar.",
+      );
+    }
 
     setLoading(true);
     setStep("minting");
 
     try {
-      // 🟢 Llamamos directamente a tu API para regalar el NFT (Sin cobrar)
+      // 🟢 Llamamos al Robot
       const response = await fetch("/api/mint-passport", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          recipient: wallet.address,
-          tipo: `Sello ${municipio}`, // Ej: "Sello Guatapé"
+          recipient: address, // ✅ Ahora sí va el 0x...
+          puebloId: municipio, // ✅ Cambiado de 'tipo' a 'puebloId' para que el Robot lo entienda
         }),
       });
 
@@ -42,6 +47,7 @@ export default function ReclamarSello({
       if (response.ok && data.success) {
         setStep("success");
       } else {
+        // Si el robot devuelve error, lo mostramos
         throw new Error(data.error || "Error en el minteo");
       }
     } catch (error: any) {
@@ -53,6 +59,7 @@ export default function ReclamarSello({
     }
   };
 
+  // ... (El resto de tu JSX de éxito e interfaz se queda igual)
   if (step === "success") {
     return (
       <div className="bg-green-900/20 border border-green-500 p-8 rounded-3xl text-center flex flex-col items-center">
@@ -66,10 +73,7 @@ export default function ReclamarSello({
         <h3 className="text-2xl font-black text-green-400">
           ¡Sello Estampado! 🎊
         </h3>
-        <p className="text-zinc-300 mt-2">
-          El recuerdo de tu visita a {municipio} ya está en tu Pasaporte
-          Digital.
-        </p>
+        <p className="text-zinc-300 mt-2">Guardado en tu Pasaporte Digital.</p>
       </div>
     );
   }
@@ -85,20 +89,24 @@ export default function ReclamarSello({
           />
         </div>
       </div>
-
       <div>
-        <h3 className="text-2xl font-black">{municipio}</h3>
+        <h3 className="text-2xl font-black">{municipio.replace("_", " ")}</h3>
         <p className="text-sm text-zinc-400 mt-2 flex items-center justify-center gap-1">
           <MapPin size={16} /> Estás a punto de agregar este sello.
         </p>
       </div>
-
       <button
         onClick={reclamarNFT}
         disabled={loading}
-        className="w-full py-4 bg-purple-600 text-white rounded-2xl font-black uppercase tracking-wider hover:bg-purple-500 transition-colors disabled:opacity-50"
+        className="w-full py-4 bg-purple-600 text-white rounded-2xl font-black uppercase tracking-wider hover:bg-purple-500 transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
       >
-        {loading ? "Estampando en Blockchain..." : "Reclamar Sello"}
+        {loading ? (
+          <>
+            <Loader2 className="animate-spin" size={20} /> Estampando...
+          </>
+        ) : (
+          "Reclamar Sello"
+        )}
       </button>
     </div>
   );

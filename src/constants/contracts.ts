@@ -3,13 +3,13 @@ import { PASSPORT_ADDRESS, PASSPORT_ABI } from "./abis/ArtesaniaPassportABI";
 import { REGISTRY_ADDRESS } from "./abis/ArtesaniaRegistryABI";
 import { BADGE_ADDRESS } from "./abis/ArtesaniaBadgeABI";
 
-// 🎨 CONTRATO DE PASAPORTE (Queda igualito, usa su propio archivo de ABI)
+// 🎨 CONTRATO DE PASAPORTE (Mismo archivo de siempre)
 export const PASSPORT_CONTRACT = {
     address: PASSPORT_ADDRESS,
     abi: PASSPORT_ABI,
 } as const;
 
-// 🛡️ CONTRATO BADGE (Insignias ERC-1155 - ABI limpio inyectado)
+// 🛡️ CONTRATO BADGE (ERC-1155)
 export const BADGE_CONTRACT = {
     address: BADGE_ADDRESS,
     abi: [
@@ -53,7 +53,7 @@ export const BADGE_CONTRACT = {
     ]
 } as const;
 
-// 🗃️ CONTRATO REGISTRY (Mantenemos tu "magia" de ABI limpio)
+// 🗃️ CONTRATO REGISTRY (Versión Optimizada v0.8.28)
 export const REGISTRY_CONTRACT = {
     address: REGISTRY_ADDRESS,
     abi: [
@@ -62,8 +62,9 @@ export const REGISTRY_CONTRACT = {
             type: "function",
             stateMutability: "nonpayable",
             inputs: [
-                { name: "_puebloId", type: "string" },
-                { name: "_cid", type: "string" }
+                { name: "_puebloId", type: "bytes32" }, // 🟢 1. Bytes32 (Gas saver)
+                { name: "_cid", type: "string" },      // 🟢 2. Hash IPFS
+                { name: "_viajero", type: "address" }   // 🟢 3. El Turista real (Recipient)
             ],
             outputs: []
         },
@@ -71,14 +72,14 @@ export const REGISTRY_CONTRACT = {
             name: "obtenerMural",
             type: "function",
             stateMutability: "view",
-            inputs: [{ name: "_puebloId", type: "string" }],
+            inputs: [{ name: "_puebloId", type: "bytes32" }], // 🟢 También bytes32 aquí
             outputs: [{
                 type: "tuple[]",
                 components: [
-                    { name: "cid", type: "string" },
                     { name: "autor", type: "address" },
-                    { name: "fecha", type: "uint256" },
-                    { name: "esArtesano", type: "bool" }
+                    { name: "fecha", type: "uint40" },    // 🟢 uint40 (Storage packing)
+                    { name: "esArtesano", type: "bool" },
+                    { name: "cid", type: "string" }
                 ]
             }]
         }
