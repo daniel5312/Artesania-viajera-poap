@@ -149,8 +149,6 @@ import { useSearchParams, useRouter } from "next/navigation";
 import FarcasterLoader from "@/components/farcasterLoader";
 import sdk from "@farcaster/frame-sdk";
 import { MapPin, Lock, Loader2 } from "lucide-react";
-
-// 🟢 1. IMPORTAMOS EL DETECTOR DE CELULARES
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const Mapa = dynamic(() => import("@/components/mapa"), {
@@ -172,23 +170,18 @@ const ESPACIOS_PASAPORTE = [
   { id: 4, municipio: "Jardín", descubierto: false, imagen: "" },
 ];
 
-// 🟢 2. AQUÍ ADENTRO VA LA LÓGICA (EL CEREBRO)
 function HomeContent() {
   const { login, authenticated, user } = usePrivy();
   const { wallets } = useWallets();
   const searchParams = useSearchParams();
   const router = useRouter();
-
-  // 🟢 3. PRENDEMOS EL DETECTOR
   const isMobile = useIsMobile();
 
   const [mounted, setMounted] = useState(false);
   const [isAutoMinting, setIsAutoMinting] = useState(false);
   const selloPendiente = searchParams.get("sello");
 
-  // 🟢 4. EL POLICÍA DE TRÁFICO: Redirección automática a MiniPay
   useEffect(() => {
-    // Si es un celular, lo mandamos a la ruta pastel sin guardar historial
     if (isMobile) {
       router.replace("/minipay", { scroll: false });
     }
@@ -199,24 +192,24 @@ function HomeContent() {
     if (sdk?.actions?.ready) sdk.actions.ready();
   }, []);
 
-  // La magia del minteo del QR (Se queda intacta)
   useEffect(() => {
     const autoMint = async () => {
+      const addressSegura = user?.wallet?.address || wallets?.[0]?.address;
+
       if (
         selloPendiente &&
         authenticated &&
-        wallets.length > 0 &&
+        addressSegura?.startsWith("0x") &&
         !isAutoMinting
       ) {
         setIsAutoMinting(true);
-        const wallet = wallets[0];
         try {
           const response = await fetch("/api/mint-passport", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              recipient: wallet.address,
-              tipo: `Sello ${selloPendiente}`,
+              recipient: addressSegura,
+              puebloId: selloPendiente,
             }),
           });
           if (response.ok)
@@ -232,9 +225,8 @@ function HomeContent() {
       }
     };
     autoMint();
-  }, [selloPendiente, authenticated, wallets, isAutoMinting, router]);
+  }, [selloPendiente, authenticated, user, wallets, isAutoMinting, router]);
 
-  // 🟢 5. EVITAMOS PARPADEOS: Si es móvil, no renderizamos la PC para que la transición sea limpia
   if (!mounted || isMobile) return null;
 
   return (
@@ -243,7 +235,7 @@ function HomeContent() {
         <FarcasterLoader />
 
         {isAutoMinting && (
-          <div className="fixed inset-0 z-index[9999] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center">
+          <div className="fixed inset-0 z-9999 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center">
             <Loader2 className="w-16 h-16 text-purple-500 animate-spin mb-4" />
             <h2 className="text-2xl font-black uppercase">
               Estampando tu sello...
@@ -336,7 +328,6 @@ function HomeContent() {
   );
 }
 
-// 🟢 6. LA ENVOLTURA DE NEXT.JS (Se queda igual)
 export default function ClientHome() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-[#0a0a0a]" />}>

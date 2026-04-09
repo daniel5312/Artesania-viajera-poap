@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useAccount, useReadContract } from "wagmi";
 import { celo } from "viem/chains";
+import { stringToHex, pad } from "viem"; // 🟢 IMPORTANTE: Para convertir IDs a bytes32
 import imageCompression from "browser-image-compression";
 import { REGISTRY_CONTRACT } from "@/constants/contracts";
 import { ImageModal } from "./image-modal";
@@ -27,18 +28,21 @@ export function MomentosView({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
   const [procesando, setProcesando] = useState(false);
-  const [isConfirmed, setIsConfirmed] = useState(false); // 🟢 Ahora lo controlamos nosotros
+  const [isConfirmed, setIsConfirmed] = useState(false);
   const [fotosLocales, setFotosLocales] = useState<string[]>([]);
   const [imagenAmpliada, setImagenAmpliada] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. LECTURA (Sigue igual, no necesita firma)
+  // 1. LECTURA (Corregida: El contrato exige bytes32)
   const { data: muralData } = useReadContract({
     address: REGISTRY_CONTRACT.address,
     abi: REGISTRY_CONTRACT.abi,
     functionName: "obtenerMural",
-    args: selectedSello ? [selectedSello.puebloId] : [""],
+    // 🟢 FIX: Convertimos el string (ej. "guatape_socalos") al formato exacto de la blockchain
+    args: selectedSello?.puebloId
+      ? [pad(stringToHex(selectedSello.puebloId), { size: 32 })]
+      : [pad(stringToHex(""), { size: 32 })],
     query: { enabled: !!selectedSello },
   });
 
@@ -46,6 +50,7 @@ export function MomentosView({
   const fotosHistoricas = ((muralData as any[]) || [])
     .filter((item) => {
       if (!item || !item.autor) return false;
+      // 🟢 FIX: toLowerCase previene errores si la wallet tiene mayúsculas intercaladas
       return address && item.autor.toLowerCase() === address.toLowerCase();
     })
     .map((item) => {
@@ -68,7 +73,7 @@ export function MomentosView({
     return new File([u8arr], filename, { type: "image/jpeg" });
   };
 
-  // 🟢 3. LÓGICA DEL ROBOT (FETCH)
+  // 3. LÓGICA DEL ROBOT (FETCH)
   const handleGuardarMomento = async () => {
     if (!address) return alert("🚨 Billetera no conectada.");
     if (!fotoPreview) return alert("📸 Selecciona una foto.");
@@ -93,7 +98,7 @@ export function MomentosView({
       const dataUpload = await resUpload.json();
       if (!dataUpload.success) throw new Error(dataUpload.error);
 
-      // C. 🪄 REGISTRO AUTOMÁTICO (Aquí el servidor firma por ti)
+      // C. REGISTRO AUTOMÁTICO
       const resRegister = await fetch("/api/register-moment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -107,7 +112,6 @@ export function MomentosView({
       const dataRegister = await resRegister.json();
       if (!dataRegister.success) throw new Error(dataRegister.error);
 
-      // Éxito: Activamos el estado de confirmado
       setIsConfirmed(true);
     } catch (error: any) {
       alert(error.message || "Error técnico");
@@ -128,11 +132,9 @@ export function MomentosView({
     }, 500);
   };
 
-  // ... (El resto del JSX se mantiene igual, solo asegúrate de que use 'procesando' o 'isConfirmed')
   const isWorking = procesando;
 
-  // --- ABAJO EL RENDER ---
-  if (!selectedSello) return /* ... mismo div de error ... */ null;
+  if (!selectedSello) return null;
 
   return (
     <div className="flex flex-col gap-6 relative pb-36">
@@ -190,7 +192,7 @@ export function MomentosView({
         </div>
       </div>
 
-      {/* 4. MODAL DE CÁMARA ACTUALIZADO */}
+      {/* 4. MODAL DE CÁMARA */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-md px-4 py-6">
           <div className="w-full max-w-sm bg-card/90 rounded-[2.5rem] shadow-2xl border border-primary/20 flex flex-col max-h-[95vh] overflow-y-auto">

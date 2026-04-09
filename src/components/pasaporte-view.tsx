@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { usePrivy } from "@privy-io/react-auth";
-import { createPublicClient, http, getAddress } from "viem";
+import { createPublicClient, http } from "viem"; // 🟢 Quitamos getAddress de aquí
 import { celo } from "viem/chains";
 import { PASSPORT_CONTRACT } from "@/constants/contracts";
 import {
@@ -53,11 +53,14 @@ export function PasaporteView({
         allowFailure: true,
       });
 
-      const misIds = ids.filter(
-        (_, i) =>
-          owners[i].status === "success" &&
-          getAddress(owners[i].result as string) === getAddress(walletAddress),
-      );
+      // 🟢 FIX APLICADO AQUÍ: Comparación segura ignorando el Checksum
+      const misIds = ids.filter((_, i) => {
+        if (owners[i].status !== "success") return false;
+        return (
+          (owners[i].result as string).toLowerCase() ===
+          walletAddress.toLowerCase()
+        );
+      });
 
       const uris = await publicClient.multicall({
         contracts: misIds.map((id) => ({

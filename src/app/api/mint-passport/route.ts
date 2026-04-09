@@ -4,6 +4,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { celo } from "viem/chains";
 import { PASSPORT_CONTRACT } from "@/constants/contracts";
 
+// 🟢 Solo tus sellos reales, sin inventos
 const SELLOS_IPFS: Record<string, string> = {
     guatape_socalos: "https://gateway.pinata.cloud/ipfs/bafkreigqcbgkpmhml3zahydb7hq7gb373nhtjbssc4lko6su42l6tzrxf4",
     sombrillas_guatape: "https://gateway.pinata.cloud/ipfs/bafkreiegxd63qmcetnfhryf3x7uk63ayxnezqpx7nk6zup3532dzzfznu4"
@@ -12,13 +13,26 @@ const SELLOS_IPFS: Record<string, string> = {
 export async function POST(request: Request) {
     try {
         const { recipient, puebloId } = await request.json();
-        if (!isAddress(recipient)) return NextResponse.json({ success: false, error: "Address inválida" }, { status: 400 });
+
+        // Validación de seguridad
+        if (!recipient || !isAddress(recipient)) {
+            return NextResponse.json({ success: false, error: "Address inválida o vacía" }, { status: 400 });
+        }
 
         const tokenURI = SELLOS_IPFS[puebloId];
-        if (!tokenURI) return NextResponse.json({ success: false, error: "Sello no encontrado" }, { status: 404 });
+        if (!tokenURI) {
+            return NextResponse.json({ success: false, error: "Sello no encontrado" }, { status: 404 });
+        }
 
-        const account = privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`);
-        const client = createWalletClient({ account, chain: celo, transport: http("https://forno.celo.org") }).extend(publicActions);
+        const privateKey = process.env.PRIVATE_KEY as `0x${string}`;
+        if (!privateKey) throw new Error("Falta PRIVATE_KEY en el servidor");
+
+        const account = privateKeyToAccount(privateKey);
+        const client = createWalletClient({
+            account,
+            chain: celo,
+            transport: http("https://forno.celo.org")
+        }).extend(publicActions);
 
         const hash = await client.writeContract({
             address: PASSPORT_CONTRACT.address as `0x${string}`,
