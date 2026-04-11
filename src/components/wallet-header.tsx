@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Wallet,
   Copy,
@@ -8,37 +8,33 @@ import {
   Sun,
   Moon,
   Languages,
-  LogIn,
   LogOut,
 } from "lucide-react";
 import { useTheme } from "@/lib/theme-context";
 import { t } from "@/lib/i18n";
 import { usePrivy } from "@privy-io/react-auth";
-// 🟢 Importamos Hooks de Wagmi y Navigation
 import { useAccount, useDisconnect } from "wagmi";
 import { usePathname } from "next/navigation";
 
 export function WalletHeader() {
   const [copied, setCopied] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
   const { isDarkMode, toggleTheme, lang, toggleLang } = useTheme();
   const pathname = usePathname();
 
-  // 🟢 DETECTOR DE RUTA: ¿Estamos en MiniPay?
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const isMiniPayRoute = pathname?.includes("/minipay");
 
-  // 🟢 DATOS DE PRIVY (Para Vercel/Web normal)
-  const {
-    login,
-    logout: logoutPrivy,
-    authenticated: authPrivy,
-    user,
-  } = usePrivy();
-
-  // 🟢 DATOS DE WAGMI (Para MiniPay)
+  const { logout: logoutPrivy, authenticated: authPrivy, user } = usePrivy();
   const { address: wagmiAddress, isConnected: authWagmi } = useAccount();
   const { disconnect: disconnectWagmi } = useDisconnect();
 
-  // 🟢 LÓGICA HÍBRIDA: Elegimos qué mostrar según la ruta
+  if (!mounted) return null;
+
   const authenticated = isMiniPayRoute ? authWagmi : authPrivy;
   const walletAddress = isMiniPayRoute ? wagmiAddress : user?.wallet?.address;
 
@@ -88,7 +84,7 @@ export function WalletHeader() {
           )}
         </button>
 
-        {authenticated ? (
+        {authenticated && (
           <div className="flex items-center gap-1">
             <button
               onClick={handleCopy}
@@ -110,18 +106,6 @@ export function WalletHeader() {
               <LogOut className="h-4 w-4" />
             </button>
           </div>
-        ) : (
-          /* 🟢 MAGIA FINAL: En MiniPay no renderizamos el botón si no está conectado, 
-             porque useAutoConnect hará el trabajo en el fondo. */
-          !isMiniPayRoute && (
-            <button
-              onClick={login}
-              className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-primary-foreground shadow-md transition-transform active:scale-95"
-            >
-              <LogIn className="h-3.5 w-3.5" />
-              Conectar
-            </button>
-          )
         )}
       </div>
     </header>

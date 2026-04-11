@@ -1,5 +1,5 @@
 // front/src/components/Navbar.tsx
-"use client";
+/*"use client";
 import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
 import { ShoppingCart, Menu } from "lucide-react";
@@ -11,8 +11,8 @@ export default function Navbar() {
     <nav className="w-full bg-zinc-950 border-b border-zinc-800 text-white sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* LOGO */}
-          <Link href="/" className="flex items-center gap-2">
+          { LOGO }*/
+/* <Link href="/" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center font-black">
               AV
             </div>
@@ -21,7 +21,7 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* LINKS ESCRITORIO */}
+          {LINKS ESCRITORIO }
           <div className="hidden md:flex space-x-8 items-center text-sm font-medium text-zinc-300">
             <Link
               href="/pitch"
@@ -49,7 +49,7 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* ACCIONES (Carrito + Login) */}
+          {ACCIONES (Carrito + Login) }
           <div className="flex items-center gap-4">
             <button className="relative p-2 text-zinc-400 hover:text-white transition-colors">
               <ShoppingCart size={20} />
@@ -78,4 +78,4 @@ export default function Navbar() {
       </div>
     </nav>
   );
-}
+}*/

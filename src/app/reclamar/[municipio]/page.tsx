@@ -1,4 +1,4 @@
-"use client";
+/*"use client";
 import ReclamarSello from "@/components/reclamarSello";
 import { use } from "react";
 import Link from "next/link";
@@ -33,9 +33,9 @@ export default function ReclamarPage({
       </div>
 
       <div className="w-full">
-        {/* 🟢 AQUÍ INVOCAMOS LA MÁQUINA DE SELLAR QUE CREASTE */}
+        {/* 🟢 AQUÍ INVOCAMOS LA MÁQUINA DE SELLAR QUE CREASTE *}
         <ReclamarSello municipio={nombreLimpio} imagenSello={imagenPrueba} />
       </div>
     </main>
   );
-}
+}*/

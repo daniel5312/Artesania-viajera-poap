@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { useAccount, useDisconnect } from "wagmi";
 import {
   Sparkles,
   ChevronRight,
@@ -49,19 +51,45 @@ const features = [
 
 export function LandingView({ onEnter }: { onEnter: () => void }) {
   const { isDarkMode, toggleTheme } = useTheme();
-  const { login, authenticated, logout, user } = usePrivy();
 
-  const address = user?.wallet?.address;
+  // 🟢 Lógica Híbrida
+  const {
+    login,
+    authenticated: authPrivy,
+    logout: logoutPrivy,
+    user,
+  } = usePrivy();
+  const { address: wagmiAddress, isConnected: authWagmi } = useAccount();
+  const { disconnect: disconnectWagmi } = useDisconnect();
+
+  const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isMiniPayRoute = pathname?.includes("/minipay");
+  const authenticated = isMiniPayRoute ? authWagmi : authPrivy;
+  const address = isMiniPayRoute ? wagmiAddress : user?.wallet?.address;
+
   const shortAddress = address
     ? `${address.slice(0, 6)}...${address.slice(-4)}`
     : "";
+
+  function handleLogout() {
+    if (isMiniPayRoute) disconnectWagmi();
+    else logoutPrivy();
+  }
+
+  if (!mounted) return null;
 
   return (
     <div
       className={`relative min-h-screen transition-colors duration-500 font-sans ${isDarkMode ? "bg-[#0F0A1F] text-white" : "bg-[#fafafa] text-[#2D2D2D]"}`}
     >
       {/* --- HEADER --- */}
-      <nav className="fixed top-0 left-0 right-0 z-100 px-4 pt-4">
+      <nav className="fixed top-0 left-0 right-0 z-50 px-4 pt-4">
         <div
           className={`mx-auto max-w-md flex items-center justify-between p-3 rounded-full border backdrop-blur-xl shadow-lg transition-all ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white/80 border-[#4505A4]/10"}`}
         >
@@ -73,13 +101,27 @@ export function LandingView({ onEnter }: { onEnter: () => void }) {
             >
               {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            <button
-              onClick={authenticated ? logout : login}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${authenticated ? "bg-[#35D07F]/20 text-[#35D07F]" : "bg-[#4505A4] text-white shadow-lg"}`}
-            >
-              <Wallet size={14} />
-              {authenticated ? shortAddress : "Conectar"}
-            </button>
+
+            {/* 🟢 MAGIA: Oculta "Conectar" si estamos en MiniPay */}
+            {authenticated ? (
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all bg-[#35D07F]/20 text-[#35D07F]"
+              >
+                <Wallet size={14} />
+                {shortAddress}
+              </button>
+            ) : (
+              !isMiniPayRoute && (
+                <button
+                  onClick={login}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all bg-[#4505A4] text-white shadow-lg"
+                >
+                  <Wallet size={14} />
+                  Conectar
+                </button>
+              )
+            )}
           </div>
         </div>
       </nav>
@@ -124,22 +166,19 @@ export function LandingView({ onEnter }: { onEnter: () => void }) {
           ))}
         </div>
 
-        {/* --- BACKED BY SECTION (Como en la imagen) --- */}
+        {/* --- BACKED BY SECTION --- */}
         <section className="mt-20">
           <h4 className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40 mb-8">
             Respaldado por Expertos
           </h4>
           <div className="flex items-center justify-center gap-8 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all">
-            {/* Mento Labs Simulado */}
             <div className="flex items-center gap-1 font-bold text-sm">
               <div className="w-4 h-4 border-2 border-current rotate-45" />{" "}
               MENTO
             </div>
-            {/* COP Circle */}
             <div className="w-8 h-8 rounded-full border-2 border-current flex items-center justify-center text-[8px] font-black">
               COP
             </div>
-            {/* Celo Simulado */}
             <div className="flex items-center gap-1 font-bold text-sm italic underline decoration-[#35D07F]">
               CELO
             </div>

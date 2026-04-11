@@ -141,7 +141,7 @@ export default function ClientHome() {
     </ThemeProvider>
   );
 }*/
-"use client";
+/*"use client";
 import { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
@@ -334,4 +334,4 @@ export default function ClientHome() {
       <HomeContent />
     </Suspense>
   );
-}
+}*/

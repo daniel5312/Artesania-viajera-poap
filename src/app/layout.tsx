@@ -3,7 +3,7 @@
 import FarcasterLoader from "app/components/farcasterLoader";
 import "./globals.css";
 import Providers from "@/components/privyProvider";
-import Navbar from "app/components/navbar";
+//import Navbar from "app/components/navbar";
 
 export default function RootLayout({
   children,

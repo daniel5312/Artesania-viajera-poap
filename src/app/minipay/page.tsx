@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useAccount, useConnect, useConnectors } from "wagmi";
-import { usePrivy } from "@privy-io/react-auth"; // 🟢 Importamos Privy
+import { usePrivy } from "@privy-io/react-auth";
 import { Loader2 } from "lucide-react";
 
 import { ThemeProvider, useTheme } from "@/lib/theme-context";
@@ -20,11 +20,16 @@ type Tab = "pasaporte" | "tienda" | "comunidad" | "momentos";
 function AppShell() {
   const [selectedSello, setSelectedSello] = useState<any | null>(null);
 
-  // 🟢 Lógica Híbrida (Privy + Wagmi)
-  const { user, authenticated } = usePrivy();
-  const { address: wagmiAddress, isConnected } = useAccount();
+  const pathname = usePathname();
+  const isMiniPayRoute = pathname?.includes("/minipay");
+
+  const { authenticated: authPrivy, user } = usePrivy();
+  const { address: wagmiAddress, isConnected: authWagmi } = useAccount();
   const connectors = useConnectors();
   const { connect } = useConnect();
+
+  const isConnected = isMiniPayRoute ? authWagmi : authPrivy;
+  const address = isMiniPayRoute ? wagmiAddress : user?.wallet?.address;
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -36,68 +41,65 @@ function AppShell() {
   const [activeTab, setActiveTab] = useState<Tab>("pasaporte");
 
   const selloPendiente = searchParams.get("sello");
+  const isDevMode = searchParams.get("dev") === "true";
 
-  // 🛡️ Dirección Blindada
-  const finalAddress = wagmiAddress || user?.wallet?.address;
-  const isFullyConnected = isConnected || authenticated;
-
-  // 🟢 Auto-conexión solo en MiniPay (Evita MetaMask en PC)
   useEffect(() => {
     setMounted(true);
-    const isMiniPay =
-      typeof window !== "undefined" && (window as any).ethereum?.isMiniPay;
-    if (isMiniPay && !isConnected && connectors.length > 0) {
-      const injected = connectors.find((c) => c.id === "injected");
+    const checkMiniPay =
+      typeof window !== "undefined" && !!(window as any).ethereum?.isMiniPay;
+
+    if (
+      isMiniPayRoute &&
+      (checkMiniPay || isDevMode) &&
+      !authWagmi &&
+      connectors.length > 0
+    ) {
+      const injected =
+        connectors.find((c) => c.id === "injected") || connectors[0];
       if (injected) connect({ connector: injected });
     }
-  }, [connectors, connect, isConnected]);
+  }, [connectors, connect, authWagmi, isMiniPayRoute, isDevMode]);
 
   useEffect(() => {
-    if (isFullyConnected || selloPendiente) setShowLanding(false);
-  }, [isFullyConnected, selloPendiente]);
+    if (isConnected || selloPendiente) setShowLanding(false);
+  }, [isConnected, selloPendiente]);
 
   useEffect(() => {
     if (isDarkMode) document.documentElement.classList.add("dark");
     else document.documentElement.classList.remove("dark");
   }, [isDarkMode]);
 
-  // 🟢 Auto-Minting con finalAddress
   useEffect(() => {
     const autoMint = async () => {
-      if (
-        selloPendiente &&
-        isFullyConnected &&
-        finalAddress?.startsWith("0x") &&
-        !isAutoMinting
-      ) {
-        console.log("🤖 Robot: Iniciando mint para:", finalAddress);
+      if (selloPendiente && isConnected && address && !isAutoMinting) {
         setIsAutoMinting(true);
         try {
           const response = await fetch("/api/mint-passport", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              recipient: finalAddress,
-              puebloId: selloPendiente,
+              recipient: address,
+              tipo: `Sello ${selloPendiente}`,
             }),
           });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            console.error("❌ Error del Robot:", errorData);
-          } else {
-            alert(`¡Sello de ${selloPendiente} estampado!`);
-          }
+          if (response.ok) alert(`¡Sello añadido!`);
         } catch (error) {
-          console.error("💥 Error en el fetch:", error);
+          console.error(error);
         } finally {
           setIsAutoMinting(false);
-          router.replace("/minipay", { scroll: false });
+          router.replace(isMiniPayRoute ? "/minipay" : "/", { scroll: false });
         }
       }
     };
     autoMint();
-  }, [selloPendiente, isFullyConnected, finalAddress, isAutoMinting, router]);
+  }, [
+    selloPendiente,
+    isConnected,
+    address,
+    isAutoMinting,
+    router,
+    isMiniPayRoute,
+  ]);
 
   if (!mounted) return null;
 
@@ -108,7 +110,6 @@ function AppShell() {
     <div
       className={`mx-auto min-h-screen max-w-md relative overflow-hidden transition-colors duration-500 ${isDarkMode ? "bg-[#0F0A1F] text-white" : "bg-[#faf8f5] text-[#2D2D2D]"}`}
     >
-      {/* Fondo de Orbes Animados */}
       <div className="pointer-events-none fixed inset-0 z-0">
         <div
           className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/woven.png')] bg-repeat"
@@ -134,15 +135,6 @@ function AppShell() {
             <h2 className="text-xl font-black uppercase text-white">
               Estampando Sello...
             </h2>
-          </div>
-        )}
-
-        {/* 🟢 Aviso solo si no hay NI Wagmi NI Privy */}
-        {!isFullyConnected && (
-          <div className="mx-5 mt-4 p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-center z-20">
-            <p className="text-sm font-bold text-red-500">
-              Conecta tu billetera o usa Google para continuar
-            </p>
           </div>
         )}
 
