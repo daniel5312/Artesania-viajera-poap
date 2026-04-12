@@ -53,7 +53,7 @@ const NFT_PRODUCTS = [
   {
     id: 5,
     name: "Jericó",
-    price: "0.1",
+    price: "0.01",
     puebloId: "jerico_cuero",
     img: "/images/product-mochila.jpg",
     wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
@@ -62,7 +62,7 @@ const NFT_PRODUCTS = [
   {
     id: 6,
     name: "Mompox",
-    price: "0.12",
+    price: "0.02",
     puebloId: "mompox_filigrana",
     img: "/images/stamp-guatape.jpg",
     wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
@@ -83,14 +83,11 @@ export function TiendaView() {
   const [paid, setPaid] = useState<Set<number>>(new Set());
   const [imagenAmpliada, setImagenAmpliada] = useState<string | null>(null);
   const [paymentHash, setPaymentHash] = useState<`0x${string}` | undefined>();
-  const [pendingProduct, setPendingProduct] = useState<
-    | {
-        id: number;
-        puebloId: string;
-        recipient: string;
-      }
-    | null
-  >(null);
+  const [pendingProduct, setPendingProduct] = useState<{
+    id: number;
+    puebloId: string;
+    recipient: string;
+  } | null>(null);
 
   const {
     isLoading: isConfirmingPayment,
@@ -136,7 +133,9 @@ export function TiendaView() {
         alert("¡Gracias por apoyar al artesano! Tu NFT ha sido enviado.");
       } catch (error: any) {
         if (cancelled) return;
-        alert(error.message || "El pago salió, pero el NFT no se pudo mintear.");
+        alert(
+          error.message || "El pago salió, pero el NFT no se pudo mintear.",
+        );
       } finally {
         if (cancelled) return;
 

@@ -1,12 +1,12 @@
 import { createConfig } from "@privy-io/wagmi";
-//import { celoSepolia } from "viem/chains";
+import { celoSepolia } from "viem/chains";
 import { celo } from "viem/chains";
 import { http } from "viem";
 
 export const wagmiConfig = createConfig({
-    // 🟢 Solo dejamos Celo Sepolia para evitar confusiones en MetaMask
-    chains: [celo],
+    chains: [celo, celoSepolia],
     transports: {
-        [celo.id]: http(),
+        [celo.id]: http("https://forno.celo.org"), // 🟢 Forzamos el RPC de Mainnet
+        [celoSepolia.id]: http("https://alfajores.forno.celo.org"), // 🟡 Forzamos el RPC de Sepolia
     },
 });

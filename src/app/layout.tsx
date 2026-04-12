@@ -13,8 +13,8 @@ export default function RootLayout({
   return (
     <html lang="es">
       <meta
-        httpEquiv="Content-Security-Policy"
-        content="... connect-src 'self' https://auth.privy.io https://gateway.pinata.cloud https://*.mypinata.cloud; ..."
+        //httpEquiv="Content-Security-Policy"
+        content="connect-src 'self' https://auth.privy.io https://gateway.pinata.cloud https://*.mypinata.cloud; img-src 'self' data: https://gateway.pinata.cloud https://*.mypinata.cloud; default-src 'self'; script-src 'self' https://auth.privy.io; style-src 'self' 'unsafe-inline';"
       />
       <body>
         <Providers>

@@ -1,4 +1,4 @@
-/*"use client";
+"use client";
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -89,10 +89,10 @@ function AppShell() {
     >
       <FarcasterLoader />
 
-      {/* HEADER INTELIGENTE CON PRIVY }
+      {/* HEADER INTELIGENTE CON PRIVY */}
       <WalletHeader />
 
-      {/* OVERLAY DE CARGA DEL QR }
+      {/* OVERLAY DE CARGA DEL QR */}
       {isAutoMinting && (
         <div className="absolute inset-0 z-index[100] bg-background/80 backdrop-blur-md flex flex-col items-center justify-center text-center p-6">
           <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
@@ -102,7 +102,7 @@ function AppShell() {
         </div>
       )}
 
-      {/* AVISO SI HAY QR PERO NO ESTÁ LOGUEADO }
+      {/* AVISO SI HAY QR PERO NO ESTÁ LOGUEADO */}
       {selloPendiente && !authenticated && (
         <div className="mx-5 mt-4 p-4 rounded-2xl bg-primary/10 border border-primary/30 text-center animate-pulse">
           <p className="text-sm font-bold text-primary mb-2">
@@ -117,15 +117,21 @@ function AppShell() {
         </div>
       )}
 
-      {/* VISTAS DINÁMICAS }
+      {/* VISTAS DINÁMICAS */}
       <main className="mt-2 pb-24">
-        {activeTab === "pasaporte" && <PasaporteView />}
+        {activeTab === "pasaporte" && (
+          <PasaporteView
+            onStampClick={function (sello: any): void {
+              throw new Error("Function not implemented.");
+            }}
+          />
+        )}
         {activeTab === "tienda" && <TiendaView />}
-        {activeTab === "momentos" && <MomentosView />}
+        {activeTab === "momentos" && <MomentosView selectedSello={undefined} />}
         {activeTab === "comunidad" && <ComunidadView />}
       </main>
 
-      {/* NAVEGACIÓN INFERIOR ESTILO APP }
+      {/* NAVEGACIÓN INFERIOR ESTILO APP */}
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
   );
@@ -140,7 +146,7 @@ export default function ClientHome() {
       </Suspense>
     </ThemeProvider>
   );
-}*/
+}
 /*"use client";
 import { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";

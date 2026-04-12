@@ -5,15 +5,14 @@ import {
   Loader2,
   CheckCircle2,
   Globe,
-  ArrowLeft,
   FlaskConical,
 } from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
 import imageCompression from "browser-image-compression";
 import { celo, celoSepolia } from "viem/chains";
 
-// 🟢 EL INTERRUPTOR QUE TE GUSTA:
-// Cambia esto a 'celoSepolia' cuando estés probando y a 'celo' para el despliegue real.
+// 🟢 EL INTERRUPTOR MAESTRO:
+// Cambia a 'celoSepolia' para pruebas y a 'celo' para producción.
 const ACTIVE_CHAIN = celo;
 
 type TabType = "pasaporte" | "tienda" | "comunidad" | "momentos";
@@ -42,16 +41,16 @@ export function SelloDetalle({
 
     setProcesando(true);
     try {
-      // 1. Compresión
-      const reader = new FileReader();
+      // 1. Convertir preview a File y comprimir
       const imageFile = await fetch(fotoPreview)
         .then((r) => r.blob())
         .then((blob) => new File([blob], "foto.jpg", { type: "image/jpeg" }));
+
       const compressedFile = await imageCompression(imageFile, {
-        maxSizeMB: 0.8,
+        maxSizeMB: 0.5,
       });
 
-      // 2. Subida a Pinata
+      // 2. Subida a Pinata (API interna)
       const formData = new FormData();
       formData.append("file", compressedFile);
       const resUpload = await fetch("/api/upload-moment", {
@@ -59,8 +58,11 @@ export function SelloDetalle({
         body: formData,
       });
       const dataUpload = await resUpload.json();
+      if (!dataUpload.success)
+        throw new Error("Falla en IPFS: " + dataUpload.error);
 
-      // 3. 🤖 LLAMADO AL ROBOT DINÁMICO
+      // 3. 🤖 LLAMADO AL ROBOT (Backend)
+      // Le pasamos el chainId para que el backend elija el RPC y el Contrato correcto
       const resRegister = await fetch("/api/register-moment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -68,7 +70,6 @@ export function SelloDetalle({
           recipient: address,
           puebloId: sello.puebloId,
           cid: dataUpload.ipfsUrl,
-          // 👈 LE PASAMOS EL ID DE LA RED AL BACKEND
           chainId: ACTIVE_CHAIN.id,
         }),
       });
@@ -78,6 +79,7 @@ export function SelloDetalle({
 
       setIsConfirmed(true);
     } catch (error: any) {
+      console.error("Error en proceso:", error);
       alert("Error: " + error.message);
     } finally {
       setProcesando(false);
@@ -86,26 +88,33 @@ export function SelloDetalle({
 
   return (
     <div className="flex flex-col gap-6 text-center">
-      {/* INDICADOR DE RED (Para que no se te olvide en qué estás) */}
+      {/* INDICADOR DE RED CORREGIDO */}
       <div className="flex items-center justify-center gap-2">
-        {ACTIVE_CHAIN.id === 42220 ? (
-          <span className="flex items-center gap-1 text-[10px] bg-amber-500/20 text-amber-600 px-2 py-1 rounded-full font-bold uppercase">
+        {ACTIVE_CHAIN.id === 42220 ? ( // ID de Celo Sepolia
+          <span className="flex items-center gap-1 text-[10px] bg-amber-500/20 text-amber-600 px-3 py-1 rounded-full font-black uppercase tracking-tighter">
             <FlaskConical size={12} /> Testnet Sepolia
           </span>
         ) : (
-          <span className="text-[10px] bg-green-500/20 text-green-600 px-2 py-1 rounded-full font-bold uppercase">
-            Mainnet
+          <span className="flex items-center gap-1 text-[10px] bg-green-500/20 text-green-600 px-3 py-1 rounded-full font-black uppercase tracking-tighter">
+            <CheckCircle2 size={12} /> Celo Mainnet
           </span>
         )}
       </div>
 
-      {/* ... (Todo el resto del JSX que ya teníamos del post anterior) ... */}
+      {/* ... El resto de tu JSX de carga de imagen ... */}
+
       <button
         onClick={handleGuardarMomento}
         disabled={!fotoPreview || procesando}
-        className="w-full bg-primary text-white py-4 rounded-2xl font-black text-xs uppercase shadow-xl"
+        className="w-full bg-primary text-white py-4 rounded-2xl font-black text-xs uppercase shadow-xl disabled:opacity-50"
       >
-        {procesando ? "Robot trabajando..." : "🚀 Publicar (Gasless)"}
+        {procesando ? (
+          <span className="flex items-center justify-center gap-2">
+            <Loader2 className="animate-spin" size={16} /> Robot Trabajando...
+          </span>
+        ) : (
+          "🚀 Publicar Momento (Gasless)"
+        )}
       </button>
     </div>
   );

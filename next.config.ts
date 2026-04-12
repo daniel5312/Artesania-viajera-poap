@@ -13,6 +13,18 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react', '@privy-io/react-auth']
   },
 
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.mypinata.cloud',
+      },
+      {
+        protocol: 'https',
+        hostname: 'gateway.pinata.cloud',
+      },
+    ],
+  },
   transpilePackages: ['@selfxyz/core', '@selfxyz/qrcode'],
 
   async headers() {
