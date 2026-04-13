@@ -6,12 +6,28 @@ import {
   useSendTransaction,
   useSwitchChain,
   useWaitForTransactionReceipt,
+  useWriteContract, // 🟢 NUEVO: Para interactuar con contratos de tokens ERC-20
 } from "wagmi";
-import { parseEther, getAddress } from "viem";
+import { parseEther, getAddress, parseUnits } from "viem"; // 🟢 NUEVO: parseUnits para G$
 import { celo } from "viem/chains";
 import { useTheme } from "@/lib/theme-context";
 import { Loader2, CheckCircle, Store, Map } from "lucide-react";
 import { ImageModal } from "./image-modal";
+
+// 🟢 NUEVO: Configuración de GoodDollar en Celo Mainnet
+const G_DOLLAR_ADDRESS = "0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A";
+const erc20Abi = [
+  {
+    name: "transfer",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+] as const;
 
 const NFT_PRODUCTS = [
   {
@@ -73,6 +89,7 @@ const NFT_PRODUCTS = [
 export function TiendaView() {
   const { user, authenticated, login } = usePrivy();
   const { sendTransactionAsync } = useSendTransaction();
+  const { writeContractAsync } = useWriteContract(); // 🟢 NUEVO: Hook para GoodDollar
   const { switchChainAsync } = useSwitchChain();
   const { isDarkMode } = useTheme();
 
@@ -130,7 +147,8 @@ export function TiendaView() {
         if (cancelled) return;
 
         setPaid((prev) => new Set(prev).add(pendingProduct.id));
-        alert("¡Gracias por apoyar al artesano! Tu NFT ha sido enviado.");
+        // 🟢 CORRECCIÓN DE TEXTO: Ajustado para la experiencia de Tienda
+        alert("¡Apoyo entregado al artesano! Tu NFT ha sido enviado.");
       } catch (error: any) {
         if (cancelled) return;
         alert(
@@ -152,7 +170,8 @@ export function TiendaView() {
     };
   }, [isPaymentConfirmed, pendingProduct]);
 
-  async function handlePay(product: (typeof NFT_PRODUCTS)[0]) {
+  // ✅ Pago nativo con CELO (Con el fix del chainId incluido)
+  async function handlePayCelo(product: (typeof NFT_PRODUCTS)[0]) {
     if (!authenticated) return login();
 
     const recipient = user?.wallet?.address;
@@ -173,6 +192,7 @@ export function TiendaView() {
       const tx = await sendTransactionAsync({
         to: getAddress(product.wallet),
         value: parseEther(product.price),
+        chainId: celo.id, // 🔥 Esto previene el error del gasLimit de MetaMask
       });
       setPendingProduct({
         id: product.id,
@@ -187,6 +207,50 @@ export function TiendaView() {
       alert(
         error.shortMessage ||
           "La transacción falló. Asegúrate de tener saldo en CELO real y estar en Celo Mainnet.",
+      );
+    }
+  }
+
+  // 🟢 NUEVO: Función de pago con GoodDollar
+  async function handlePayGoodDollar(product: (typeof NFT_PRODUCTS)[0]) {
+    if (!authenticated) return login();
+
+    const recipient = user?.wallet?.address;
+    if (!recipient) {
+      alert("Conecta una wallet válida en Privy antes de comprar.");
+      return;
+    }
+
+    setPaying(product.id);
+
+    try {
+      try {
+        await switchChainAsync({ chainId: celo.id });
+      } catch (e) {
+        console.log("Ya en Celo Mainnet o usuario canceló switch");
+      }
+
+      const tx = await writeContractAsync({
+        address: G_DOLLAR_ADDRESS,
+        abi: erc20Abi,
+        functionName: "transfer",
+        args: [getAddress(product.wallet), parseUnits(product.price, 18)],
+        chainId: celo.id,
+      });
+
+      setPendingProduct({
+        id: product.id,
+        puebloId: product.puebloId,
+        recipient,
+      });
+      setPaymentHash(tx);
+    } catch (error: any) {
+      setPaying(null);
+      setPaymentHash(undefined);
+      setPendingProduct(null);
+      alert(
+        error.shortMessage ||
+          "La transacción falló. Asegúrate de tener saldo de GoodDollar (G$) en Celo Mainnet.",
       );
     }
   }
@@ -250,23 +314,43 @@ export function TiendaView() {
                 {nft.name}
               </span>
               <span className="text-[9px] font-mono text-primary font-bold text-center">
-                {nft.price} CELO
+                {nft.price}
               </span>
-              <button
-                onClick={() => handlePay(nft)}
-                disabled={
-                  paying !== null || isConfirmingPayment || paid.has(nft.id)
-                }
-                className={`mt-2 w-full py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 active:scale-95 ${paid.has(nft.id) ? "bg-green-500/10 text-green-500 border border-green-500/20" : "bg-primary text-white shadow-md hover:bg-primary/90"}`}
-              >
-                {paying === nft.id || isConfirmingPayment ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : paid.has(nft.id) ? (
-                  "Mío"
-                ) : (
-                  "Comprar"
+
+              {/* 🟢 MODIFICACIÓN UI: Botones lado a lado para CELO y G$ */}
+              <div className="mt-1 flex gap-1 w-full">
+                <button
+                  onClick={() => handlePayCelo(nft)}
+                  disabled={
+                    paying !== null || isConfirmingPayment || paid.has(nft.id)
+                  }
+                  className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 active:scale-95 ${paid.has(nft.id) ? "bg-green-500/10 text-green-500 border border-green-500/20" : "bg-primary text-white shadow-md hover:bg-primary/90"}`}
+                >
+                  {paying === nft.id || isConfirmingPayment ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : paid.has(nft.id) ? (
+                    "Mío"
+                  ) : (
+                    "CELO"
+                  )}
+                </button>
+
+                {!paid.has(nft.id) && (
+                  <button
+                    onClick={() => handlePayGoodDollar(nft)}
+                    disabled={
+                      paying !== null || isConfirmingPayment || paid.has(nft.id)
+                    }
+                    className="flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 active:scale-95 bg-green-600 text-white shadow-md hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {paying === nft.id || isConfirmingPayment ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      "G$"
+                    )}
+                  </button>
                 )}
-              </button>
+              </div>
             </div>
           </div>
         ))}
