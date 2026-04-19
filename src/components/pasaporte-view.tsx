@@ -93,6 +93,9 @@ export function PasaporteView({
                 image: meta.image?.replace(
                   "ipfs://",
                   `https://${gateway}/ipfs/`,
+                ).replace(
+                  "https://gateway.pinata.cloud/ipfs/",
+                  `https://${gateway}/ipfs/`
                 ),
               };
             } catch {
