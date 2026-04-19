@@ -3,11 +3,31 @@ import { createWalletClient, http, publicActions } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { celo } from "viem/chains"; // O celoSepolia si sigues en testnet
 import { BADGE_CONTRACT } from "@/constants/contracts";
+import { PrivyClient } from "@privy-io/server-auth";
 
 export const dynamic = 'force-dynamic';
 
+const privy = new PrivyClient(
+    process.env.NEXT_PUBLIC_PRIVY_APP_ID || "",
+    process.env.PRIVY_APP_SECRET || ""
+);
+
 export async function POST(request: Request) {
     try {
+        // 🛡️ Validación de Sesión con Privy
+        const authHeader = request.headers.get("authorization");
+        if (!authHeader?.startsWith("Bearer ")) {
+            return NextResponse.json({ error: "Falta el token de autorización" }, { status: 401 });
+        }
+
+        const token = authHeader.split(" ")[1];
+        let verifiedUser;
+        try {
+            verifiedUser = await privy.verifyAuthToken(token);
+        } catch (error) {
+            return NextResponse.json({ error: "Token de sesión inválido" }, { status: 401 });
+        }
+
         const { recipient, badgeId } = await request.json();
 
         // 🛡️ Validación básica de seguridad

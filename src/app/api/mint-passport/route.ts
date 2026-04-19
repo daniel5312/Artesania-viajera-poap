@@ -3,15 +3,40 @@ import { createWalletClient, http, publicActions, isAddress } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { celo } from "viem/chains";
 import { PASSPORT_CONTRACT } from "@/constants/contracts";
+import { PrivyClient } from "@privy-io/server-auth";
 
-// 🟢 Solo tus sellos reales, sin inventos
+const privy = new PrivyClient(
+    process.env.NEXT_PUBLIC_PRIVY_APP_ID || "",
+    process.env.PRIVY_APP_SECRET || ""
+);
+
+// 🟢 Diccionario de NFTs para mintear (Asegúrate de actualizar los CIDs genéricos con los reales)
 const SELLOS_IPFS: Record<string, string> = {
     guatape_socalos: "https://gateway.pinata.cloud/ipfs/bafkreigqcbgkpmhml3zahydb7hq7gb373nhtjbssc4lko6su42l6tzrxf4",
-    sombrillas_guatape: "https://gateway.pinata.cloud/ipfs/bafkreiegxd63qmcetnfhryf3x7uk63ayxnezqpx7nk6zup3532dzzfznu4"
+    sombrillas_guatape: "https://gateway.pinata.cloud/ipfs/bafkreiegxd63qmcetnfhryf3x7uk63ayxnezqpx7nk6zup3532dzzfznu4",
+    jardin_cafe: "https://gateway.pinata.cloud/ipfs/QmPlaceholderJardin", // ⚠️ CAMBIAR POR EL CID REAL
+    envigado_verde: "https://gateway.pinata.cloud/ipfs/QmPlaceholderEnvigado", // ⚠️ CAMBIAR POR EL CID REAL
+    jerico_cuero: "https://gateway.pinata.cloud/ipfs/QmPlaceholderJerico", // ⚠️ CAMBIAR POR EL CID REAL
+    mompox_filigrana: "https://gateway.pinata.cloud/ipfs/QmPlaceholderMompox", // ⚠️ CAMBIAR POR EL CID REAL
+    el_carmen_ceramica: "https://gateway.pinata.cloud/ipfs/QmPlaceholderElCarmen", // ⚠️ CAMBIAR POR EL CID REAL
+    biota_line: "https://gateway.pinata.cloud/ipfs/QmPlaceholderBiota" // ⚠️ CAMBIAR POR EL CID REAL
 };
 
 export async function POST(request: Request) {
     try {
+        // 🛡️ Validación de Sesión con Privy
+        const authHeader = request.headers.get("authorization");
+        if (!authHeader?.startsWith("Bearer ")) {
+            return NextResponse.json({ error: "Falta el token de autorización" }, { status: 401 });
+        }
+
+        const token = authHeader.split(" ")[1];
+        try {
+            await privy.verifyAuthToken(token);
+        } catch (error) {
+            return NextResponse.json({ error: "Token de sesión inválido" }, { status: 401 });
+        }
+
         const { recipient, puebloId } = await request.json();
 
         // Validación de seguridad

@@ -2,6 +2,14 @@
 import { PASSPORT_ADDRESS, PASSPORT_ABI } from "./abis/ArtesaniaPassportABI";
 import { REGISTRY_ADDRESS } from "./abis/ArtesaniaRegistryABI";
 import { BADGE_ADDRESS } from "./abis/ArtesaniaBadgeABI";
+import { REFI_SPLITTER_ABI, COLLECTIVE_SPLITTER_ADDRESS, TREASURY_SPLITTER_ADDRESS } from "./abis/ReFiSplitterABI";
+
+// 🌱 CONTRATO REFI SPLITTER
+export const REFI_SPLITTER_CONTRACT = {
+    abi: REFI_SPLITTER_ABI,
+    addressCollective: COLLECTIVE_SPLITTER_ADDRESS,
+    addressTreasury: TREASURY_SPLITTER_ADDRESS,
+} as const;
 
 // 🎨 CONTRATO DE PASAPORTE (Mismo archivo de siempre)
 export const PASSPORT_CONTRACT = {

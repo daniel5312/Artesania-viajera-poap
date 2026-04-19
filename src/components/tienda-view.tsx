@@ -13,6 +13,7 @@ import { celo } from "viem/chains";
 import { useTheme } from "@/lib/theme-context";
 import { Loader2, CheckCircle, Store, Map } from "lucide-react";
 import { ImageModal } from "./image-modal";
+import { REFI_SPLITTER_CONTRACT } from "@/constants/contracts";
 
 // 🟢 NUEVO: Configuración de GoodDollar en Celo Mainnet
 const G_DOLLAR_ADDRESS = "0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A";
@@ -28,6 +29,8 @@ const erc20Abi = [
     outputs: [{ name: "", type: "bool" }],
   },
 ] as const;
+
+
 
 const NFT_PRODUCTS = [
   {
@@ -84,10 +87,28 @@ const NFT_PRODUCTS = [
     wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
     type: "artesanias",
   },
+  {
+    id: 7,
+    name: "Cerámica El Carmen",
+    price: "0.05",
+    puebloId: "el_carmen_ceramica",
+    img: "/images/community-1.jpg",
+    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
+    type: "artesanias",
+  },
+  {
+    id: 8,
+    name: "Mochila Biota",
+    price: "0.08",
+    puebloId: "biota_line",
+    img: "/images/product-mochila.jpg",
+    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
+    type: "artesanias",
+  },
 ];
 
 export function TiendaView() {
-  const { user, authenticated, login } = usePrivy();
+  const { user, authenticated, login, getAccessToken } = usePrivy();
   const { sendTransactionAsync } = useSendTransaction();
   const { writeContractAsync } = useWriteContract(); // 🟢 NUEVO: Hook para GoodDollar
   const { switchChainAsync } = useSwitchChain();
@@ -130,12 +151,16 @@ export function TiendaView() {
 
     const mintPassport = async () => {
       try {
+        const token = await getAccessToken();
         const res = await fetch("/api/mint-passport", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify({
             recipient: pendingProduct.recipient,
-            pueblo: pendingProduct.puebloId,
+            puebloId: pendingProduct.puebloId,
           }),
         });
 
@@ -189,10 +214,20 @@ export function TiendaView() {
         console.log("Ya en Celo Mainnet o usuario canceló switch");
       }
 
-      const tx = await sendTransactionAsync({
-        to: getAddress(product.wallet),
+      // [REFI] Logic: Cálculos de impacto y enrutamiento dual
+      let targetContractAddress = process.env.NEXT_PUBLIC_TREASURY_SPLITTER_ADDRESS; // Por defecto: Tesorería Biota
+      if (product.puebloId.includes("el_carmen")) {
+        targetContractAddress = process.env.NEXT_PUBLIC_COLLECTIVE_SPLITTER_ADDRESS; // GoodCollective para El Carmen
+      }
+
+      // [CELO] Transaction: Llamadas a la red.
+      const tx = await writeContractAsync({
+        address: targetContractAddress as `0x${string}`,
+        abi: REFI_SPLITTER_CONTRACT.abi,
+        functionName: "comprarArtesania",
+        args: [getAddress(product.wallet)],
         value: parseEther(product.price),
-        chainId: celo.id, // 🔥 Esto previene el error del gasLimit de MetaMask
+        chainId: celo.id,
       });
       setPendingProduct({
         id: product.id,
@@ -230,6 +265,7 @@ export function TiendaView() {
         console.log("Ya en Celo Mainnet o usuario canceló switch");
       }
 
+      // [GOODDOLLAR] Connection: Interacción con el ecosistema.
       const tx = await writeContractAsync({
         address: G_DOLLAR_ADDRESS,
         abi: erc20Abi,
