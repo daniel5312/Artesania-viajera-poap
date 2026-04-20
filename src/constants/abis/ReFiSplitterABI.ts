@@ -10,6 +10,7 @@ export const REFI_SPLITTER_ABI = [
   },
   { inputs: [], name: "InvalidAmount", type: "error" },
   { inputs: [], name: "TransferFailed", type: "error" },
+  { inputs: [], name: "InvalidAddress", type: "error" },
   {
     anonymous: false,
     inputs: [
@@ -25,6 +26,17 @@ export const REFI_SPLITTER_ABI = [
     name: "comprarArtesania",
     outputs: [],
     stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "_token", type: "address" },
+      { internalType: "address", name: "_artesano", type: "address" },
+      { internalType: "uint256", name: "_amount", type: "uint256" }
+    ],
+    name: "comprarArtesaniaERC20",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
   {

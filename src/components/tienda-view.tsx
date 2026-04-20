@@ -6,31 +6,47 @@ import {
   useSendTransaction,
   useSwitchChain,
   useWaitForTransactionReceipt,
-  useWriteContract, // 🟢 NUEVO: Para interactuar con contratos de tokens ERC-20
+  useWriteContract,
+  useAccount,
+  useConnect,
+  useConnectors,
 } from "wagmi";
-import { parseEther, getAddress, parseUnits } from "viem"; // 🟢 NUEVO: parseUnits para G$
+import { parseEther, getAddress, parseUnits, createPublicClient, http } from "viem";
+import { usePathname } from "next/navigation";
 import { celo } from "viem/chains";
 import { useTheme } from "@/lib/theme-context";
 import { Loader2, CheckCircle, Store, Map } from "lucide-react";
 import { ImageModal } from "./image-modal";
 import { REFI_SPLITTER_CONTRACT } from "@/constants/contracts";
 
-// 🟢 NUEVO: Configuración de GoodDollar en Celo Mainnet
+// 🟢 NUEVO: Configuración de Tokens ERC-20
 const G_DOLLAR_ADDRESS = "0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A";
+const USDT_ADDRESS = "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e"; // Dirección correcta de USDT nativo en Celo Mainnet
+
+const publicClient = createPublicClient({ chain: celo, transport: http("https://forno.celo.org") });
+
 const erc20Abi = [
   {
-    name: "transfer",
+    name: "approve",
     type: "function",
     stateMutability: "nonpayable",
     inputs: [
-      { name: "to", type: "address" },
+      { name: "spender", type: "address" },
       { name: "amount", type: "uint256" },
     ],
     outputs: [{ name: "", type: "bool" }],
   },
+  {
+    name: "allowance",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
 ] as const;
-
-
 
 const NFT_PRODUCTS = [
   {
@@ -108,11 +124,21 @@ const NFT_PRODUCTS = [
 ];
 
 export function TiendaView() {
-  const { user, authenticated, login, getAccessToken } = usePrivy();
+  const { user, authenticated: authPrivy, login, getAccessToken } = usePrivy();
   const { sendTransactionAsync } = useSendTransaction();
-  const { writeContractAsync } = useWriteContract(); // 🟢 NUEVO: Hook para GoodDollar
+  const { writeContractAsync } = useWriteContract();
   const { switchChainAsync } = useSwitchChain();
+  const { connectAsync } = useConnect();
+  const connectors = useConnectors();
   const { isDarkMode } = useTheme();
+
+  const pathname = usePathname();
+  const isMiniPayRoute = pathname?.includes("/minipay");
+
+  const { address: wagmiAddress, isConnected: authWagmi } = useAccount();
+
+  const isUserAuthenticated = isMiniPayRoute ? authWagmi : authPrivy;
+  const userAddress = isMiniPayRoute ? wagmiAddress : user?.wallet?.address;
 
   const [category, setCategory] = useState<"artesanias" | "sellos">(
     "artesanias",
@@ -121,6 +147,7 @@ export function TiendaView() {
   const [paid, setPaid] = useState<Set<number>>(new Set());
   const [imagenAmpliada, setImagenAmpliada] = useState<string | null>(null);
   const [paymentHash, setPaymentHash] = useState<`0x${string}` | undefined>();
+  const [paymentState, setPaymentState] = useState<"approving" | "paying" | null>(null);
   const [pendingProduct, setPendingProduct] = useState<{
     id: number;
     puebloId: string;
@@ -139,6 +166,7 @@ export function TiendaView() {
     if (!isPaymentFailed) return;
 
     setPaying(null);
+    setPaymentState(null);
     setPaymentHash(undefined);
     setPendingProduct(null);
     alert("El pago no se confirmó en Celo. Inténtalo de nuevo.");
@@ -183,6 +211,7 @@ export function TiendaView() {
         if (cancelled) return;
 
         setPaying(null);
+        setPaymentState(null);
         setPaymentHash(undefined);
         setPendingProduct(null);
       }
@@ -197,11 +226,27 @@ export function TiendaView() {
 
   // ✅ Pago nativo con CELO (Con el fix del chainId incluido)
   async function handlePayCelo(product: (typeof NFT_PRODUCTS)[0]) {
-    if (!authenticated) return login();
+    if (!isUserAuthenticated) {
+      if (!isMiniPayRoute) return login();
+      else {
+        const injected = connectors.find((c) => c.id === "injected") || connectors[0];
+        if (injected) {
+           try {
+             await connectAsync({ connector: injected });
+             alert("¡Billetera conectada! Por favor, dale clic al botón de pago de nuevo.");
+           } catch(e) {
+             alert("Error conectando MiniPay. Intenta refrescar la página.");
+           }
+        } else {
+           alert("MiniPay no detectado. Refresca la página.");
+        }
+        return;
+      }
+    }
 
-    const recipient = user?.wallet?.address;
+    const recipient = userAddress;
     if (!recipient) {
-      alert("Conecta una wallet válida en Privy antes de comprar.");
+      alert("Conecta una wallet válida antes de comprar.");
       return;
     }
 
@@ -215,9 +260,11 @@ export function TiendaView() {
       }
 
       // [REFI] Logic: Cálculos de impacto y enrutamiento dual
-      let targetContractAddress = process.env.NEXT_PUBLIC_TREASURY_SPLITTER_ADDRESS; // Por defecto: Tesorería Biota
+      let targetContractAddress =
+        process.env.NEXT_PUBLIC_TREASURY_SPLITTER_ADDRESS; // Por defecto: Tesorería Biota
       if (product.puebloId.includes("el_carmen")) {
-        targetContractAddress = process.env.NEXT_PUBLIC_COLLECTIVE_SPLITTER_ADDRESS; // GoodCollective para El Carmen
+        targetContractAddress =
+          process.env.NEXT_PUBLIC_COLLECTIVE_SPLITTER_ADDRESS; // GoodCollective para El Carmen
       }
 
       // [CELO] Transaction: Llamadas a la red.
@@ -237,6 +284,7 @@ export function TiendaView() {
       setPaymentHash(tx);
     } catch (error: any) {
       setPaying(null);
+      setPaymentState(null);
       setPaymentHash(undefined);
       setPendingProduct(null);
       alert(
@@ -246,17 +294,34 @@ export function TiendaView() {
     }
   }
 
-  // 🟢 NUEVO: Función de pago con GoodDollar
-  async function handlePayGoodDollar(product: (typeof NFT_PRODUCTS)[0]) {
-    if (!authenticated) return login();
+  // 🟢 NUEVO: Función de pago Unificada ERC-20 (USDT / G$) con flujo de 2 pasos
+  async function handlePayERC20(product: (typeof NFT_PRODUCTS)[0], tokenAddress: string, decimals: number) {
+    if (!isUserAuthenticated) {
+      if (!isMiniPayRoute) return login();
+      else {
+        const injected = connectors.find((c) => c.id === "injected") || connectors[0];
+        if (injected) {
+           try {
+             await connectAsync({ connector: injected });
+             alert("¡Billetera conectada! Por favor, dale clic al botón de pago de nuevo.");
+           } catch(e) {
+             alert("Error conectando MiniPay. Intenta refrescar la página.");
+           }
+        } else {
+           alert("MiniPay no detectado. Refresca la página.");
+        }
+        return;
+      }
+    }
 
-    const recipient = user?.wallet?.address;
+    const recipient = userAddress;
     if (!recipient) {
-      alert("Conecta una wallet válida en Privy antes de comprar.");
+      alert("Conecta una wallet válida antes de comprar.");
       return;
     }
 
     setPaying(product.id);
+    setPaymentState("approving");
 
     try {
       try {
@@ -265,12 +330,40 @@ export function TiendaView() {
         console.log("Ya en Celo Mainnet o usuario canceló switch");
       }
 
-      // [GOODDOLLAR] Connection: Interacción con el ecosistema.
-      const tx = await writeContractAsync({
-        address: G_DOLLAR_ADDRESS,
+      let targetContractAddress = process.env.NEXT_PUBLIC_TREASURY_SPLITTER_ADDRESS;
+      if (product.puebloId.includes("el_carmen")) {
+        targetContractAddress = process.env.NEXT_PUBLIC_COLLECTIVE_SPLITTER_ADDRESS;
+      }
+
+      const amount = parseUnits(product.price, decimals);
+
+      // Paso 1: Check Allowance & Approve
+      const allowance = await publicClient.readContract({
+        address: tokenAddress as `0x${string}`,
         abi: erc20Abi,
-        functionName: "transfer",
-        args: [getAddress(product.wallet), parseUnits(product.price, 18)],
+        functionName: "allowance",
+        args: [recipient as `0x${string}`, targetContractAddress as `0x${string}`],
+      });
+
+      if (allowance < amount) {
+        const approveTx = await writeContractAsync({
+          address: tokenAddress as `0x${string}`,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [targetContractAddress as `0x${string}`, amount],
+        });
+        
+        await publicClient.waitForTransactionReceipt({ hash: approveTx });
+      }
+
+      setPaymentState("paying");
+
+      // Paso 2: Pay (comprarArtesaniaERC20)
+      const tx = await writeContractAsync({
+        address: targetContractAddress as `0x${string}`,
+        abi: REFI_SPLITTER_CONTRACT.abi,
+        functionName: "comprarArtesaniaERC20",
+        args: [tokenAddress as `0x${string}`, getAddress(product.wallet), amount],
         chainId: celo.id,
       });
 
@@ -282,11 +375,12 @@ export function TiendaView() {
       setPaymentHash(tx);
     } catch (error: any) {
       setPaying(null);
+      setPaymentState(null);
       setPaymentHash(undefined);
       setPendingProduct(null);
       alert(
         error.shortMessage ||
-          "La transacción falló. Asegúrate de tener saldo de GoodDollar (G$) en Celo Mainnet.",
+          "La transacción falló. Asegúrate de tener saldo suficiente y probar de nuevo.",
       );
     }
   }
@@ -353,14 +447,12 @@ export function TiendaView() {
                 {nft.price}
               </span>
 
-              {/* 🟢 MODIFICACIÓN UI: Botones lado a lado para CELO y G$ */}
-              <div className="mt-1 flex gap-1 w-full">
+              {/* 🟢 MODIFICACIÓN UI: Botones lado a lado para CELO, cUSDT y G$ */}
+              <div className="mt-1 flex gap-1 w-full flex-wrap">
                 <button
                   onClick={() => handlePayCelo(nft)}
-                  disabled={
-                    paying !== null || isConfirmingPayment || paid.has(nft.id)
-                  }
-                  className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 active:scale-95 ${paid.has(nft.id) ? "bg-green-500/10 text-green-500 border border-green-500/20" : "bg-primary text-white shadow-md hover:bg-primary/90"}`}
+                  disabled={paying !== null || isConfirmingPayment || paid.has(nft.id)}
+                  className={`flex-1 min-w-[30%] py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 active:scale-95 ${paid.has(nft.id) ? "bg-green-500/10 text-green-500 border border-green-500/20" : "bg-primary text-white shadow-md hover:bg-primary/90"}`}
                 >
                   {paying === nft.id || isConfirmingPayment ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
@@ -372,19 +464,35 @@ export function TiendaView() {
                 </button>
 
                 {!paid.has(nft.id) && (
-                  <button
-                    onClick={() => handlePayGoodDollar(nft)}
-                    disabled={
-                      paying !== null || isConfirmingPayment || paid.has(nft.id)
-                    }
-                    className="flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 active:scale-95 bg-green-600 text-white shadow-md hover:bg-green-700 disabled:opacity-50"
-                  >
-                    {paying === nft.id || isConfirmingPayment ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      "G$"
-                    )}
-                  </button>
+                  <>
+                    <button
+                      onClick={() => handlePayERC20(nft, USDT_ADDRESS, 6)}
+                      disabled={paying !== null || isConfirmingPayment || paid.has(nft.id)}
+                      className="flex-1 min-w-[30%] py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 active:scale-95 bg-teal-600 text-white shadow-md hover:bg-teal-700 disabled:opacity-50"
+                    >
+                      {paying === nft.id && paymentState === "approving" ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : paying === nft.id && paymentState === "paying" ? (
+                        "..."
+                      ) : (
+                        "USDT"
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => handlePayERC20(nft, G_DOLLAR_ADDRESS, 18)}
+                      disabled={paying !== null || isConfirmingPayment || paid.has(nft.id)}
+                      className="flex-1 min-w-[30%] py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 active:scale-95 bg-blue-600 text-white shadow-md hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {paying === nft.id && paymentState === "approving" ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : paying === nft.id && paymentState === "paying" ? (
+                        "..."
+                      ) : (
+                        "G$"
+                      )}
+                    </button>
+                  </>
                 )}
               </div>
             </div>

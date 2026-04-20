@@ -1,8 +1,11 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { usePrivy } from "@privy-io/react-auth";
-import { createPublicClient, http } from "viem"; // 🟢 Quitamos getAddress de aquí
+import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { usePathname } from "next/navigation";
+import { useAccount, useSignMessage } from "wagmi";
+import { IdentitySDK } from "@goodsdks/citizen-sdk";
+import { createPublicClient, http, stringToHex } from "viem";
 import { celo } from "viem/chains";
 import { PASSPORT_CONTRACT } from "@/constants/contracts";
 import {
@@ -11,6 +14,9 @@ import {
   ChevronRight,
   Stamp,
   QrCode,
+  UserCheck,
+  Fingerprint,
+  Coins,
 } from "lucide-react";
 
 const MapaReal = dynamic(() => import("@/components/mapa"), { ssr: false });
@@ -29,15 +35,82 @@ export function PasaporteView({
 }: {
   onStampClick: (sello: any) => void;
 }) {
-  const { user, authenticated, login } = usePrivy();
+  const pathname = usePathname();
+  const isMiniPayRoute = pathname?.includes("/minipay");
+
+  const { address: wagmiAddress, isConnected: authWagmi } = useAccount();
+  const { signMessageAsync } = useSignMessage();
+  const { user, authenticated: authPrivy, login } = usePrivy();
+  const { wallets } = useWallets();
+
+  const authenticated = isMiniPayRoute ? authWagmi : authPrivy;
+  const userAddress = isMiniPayRoute ? wagmiAddress : user?.wallet?.address;
+
+  const [identitySDK, setIdentitySDK] = useState<any>(null);
+  const [isWhitelisted, setIsWhitelisted] = useState<boolean | null>(null);
+  const [fvLink, setFvLink] = useState<string | null>(null);
+
   const [sellos, setSellos] = useState<any[]>([]);
   const [cargando, setCargando] = useState(false);
   const [simulando, setSimulando] = useState<string | null>(null);
   const [paginaActual, setPaginaActual] = useState(1);
   const itemsPorPagina = 15;
 
+  useEffect(() => {
+    if (userAddress) {
+      const sdk = new IdentitySDK({
+        env: "production",
+        account: userAddress as `0x${string}`,
+        publicClient: publicClient as any,
+        walletClient: {
+          account: { address: userAddress },
+          chain: celo,
+          signMessage: async ({ message }: any) => {
+            const msgToSign = typeof message === 'string' ? message : message.raw || message;
+            const hexMsg = typeof msgToSign === 'string' && msgToSign.startsWith('0x') ? msgToSign : stringToHex(msgToSign);
+            if (isMiniPayRoute) {
+               return await signMessageAsync({ message: msgToSign });
+            } else {
+               const wallet = wallets.find(w => w.address === userAddress) || wallets[0];
+               if (!wallet) throw new Error("No wallet found to sign");
+               const provider = await wallet.getEthereumProvider();
+               return await provider.request({ method: 'personal_sign', params: [hexMsg, userAddress] });
+            }
+          }
+        } as any,
+      });
+      setIdentitySDK(sdk);
+    } else {
+      setIdentitySDK(null);
+      setIsWhitelisted(null);
+      setFvLink(null);
+    }
+  }, [userAddress, isMiniPayRoute, signMessageAsync, wallets]);
+
+  useEffect(() => {
+    async function checkIdentity() {
+      if (!userAddress || !identitySDK) return;
+      try {
+        const result = await identitySDK.getWhitelistedRoot(userAddress);
+        setIsWhitelisted(result.isWhitelisted);
+
+        if (!result.isWhitelisted) {
+          const link = await identitySDK.generateFVLink(
+            false,
+            window.location.href,
+            42220,
+          );
+          setFvLink(link);
+        }
+      } catch (e) {
+        console.error("Error checking identity:", e);
+      }
+    }
+    checkIdentity();
+  }, [userAddress, identitySDK]);
+
   const leerPasaporte = useCallback(async () => {
-    const walletAddress = user?.wallet?.address;
+    const walletAddress = userAddress;
     if (!authenticated || !walletAddress) return;
     setCargando(true);
     try {
@@ -90,13 +163,12 @@ export function PasaporteView({
                 ...meta,
                 id: misIds[i].toString(),
                 puebloId: meta.puebloId || "guatape_socalos",
-                image: meta.image?.replace(
-                  "ipfs://",
-                  `https://${gateway}/ipfs/`,
-                ).replace(
-                  "https://gateway.pinata.cloud/ipfs/",
-                  `https://${gateway}/ipfs/`
-                ),
+                image: meta.image
+                  ?.replace("ipfs://", `https://${gateway}/ipfs/`)
+                  .replace(
+                    "https://gateway.pinata.cloud/ipfs/",
+                    `https://${gateway}/ipfs/`,
+                  ),
               };
             } catch {
               return null;
@@ -111,16 +183,22 @@ export function PasaporteView({
     } finally {
       setCargando(false);
     }
-  }, [authenticated, user?.wallet?.address]);
+  }, [authenticated, userAddress]);
 
   const handleSimularMint = async (puebloId: string) => {
-    if (!authenticated) return login();
+    if (!authenticated) {
+      if (!isMiniPayRoute) return login();
+      else {
+        alert("MiniPay no conectado. Refresca la página.");
+        return;
+      }
+    }
     setSimulando(puebloId);
     try {
       const res = await fetch("/api/mint-passport", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipient: user?.wallet?.address, puebloId }),
+        body: JSON.stringify({ recipient: userAddress, puebloId }),
       });
       if (res.ok) {
         alert("¡Sello estampado por el Robot! 🤖");
@@ -133,17 +211,66 @@ export function PasaporteView({
     }
   };
 
-  // Asegúrate de que el useEffect se dispare solo cuando cambie el usuario real de Privy
+  // Asegúrate de que el useEffect se dispare solo cuando cambie el usuario real
   useEffect(() => {
-    if (authenticated && user?.wallet?.address) {
+    if (authenticated && userAddress) {
       leerPasaporte();
     } else {
       setSellos([]); // 🟢 Limpiar sellos si no hay nadie logueado
     }
-  }, [authenticated, user?.wallet?.address, leerPasaporte]);
+  }, [authenticated, userAddress, leerPasaporte]);
 
   return (
-    <div className="flex flex-col gap-6 px-1 relative">
+    <div className="flex flex-col gap-6 px-1 relative pb-24">
+      {/* 🟢 SECCIÓN: Identidad GoodDollar */}
+      {authenticated && userAddress && (
+        <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 shadow-inner">
+          {isWhitelisted === null ? (
+            <div className="flex items-center gap-2 text-primary font-bold text-xs">
+              <Loader2 className="w-4 h-4 animate-spin" /> Verificando Identidad
+              G$...
+            </div>
+          ) : isWhitelisted ? (
+            <>
+              <div className="flex items-center gap-2 text-green-600 bg-green-500/10 px-4 py-2 rounded-full border border-green-500/20">
+                <UserCheck size={16} />
+                <span className="text-[11px] font-black uppercase">
+                  ✅ Humano Verificado (Identidad G$)
+                </span>
+              </div>
+              <a
+                href="https://wallet.gooddollar.org/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 bg-primary text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/90 transition-colors shadow-md"
+              >
+                <Coins size={14} /> Reclamar UBI Diario
+              </a>
+            </>
+          ) : (
+            <>
+              <div className="flex flex-col items-center gap-1 text-center px-2">
+                <p className="text-xs font-bold text-foreground">
+                  Tu identidad aún no está verificada
+                </p>
+                <p className="text-[10px] text-muted-foreground leading-tight">
+                  Debes verificar que eres un humano único para reclamar el UBI
+                  y tener los beneficios completos.
+                </p>
+              </div>
+              <a
+                href={fvLink || "https://wallet.gooddollar.org/"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md hover:opacity-90 transition-opacity"
+              >
+                <Fingerprint size={14} /> Obtener Sello G$
+              </a>
+            </>
+          )}
+        </div>
+      )}
+
       <div className="h-60 w-full overflow-hidden rounded-[40px] border-4 border-card shadow-2xl z-0">
         <MapaReal />
       </div>

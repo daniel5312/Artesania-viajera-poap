@@ -61,7 +61,11 @@ function AppShell() {
   }, [connectors, connect, authWagmi, isMiniPayRoute, isDevMode]);
 
   useEffect(() => {
-    if (isConnected || selloPendiente) setShowLanding(false);
+    if (isConnected || selloPendiente) {
+      setShowLanding(false);
+    } else {
+      setShowLanding(true);
+    }
   }, [isConnected, selloPendiente]);
 
   useEffect(() => {
