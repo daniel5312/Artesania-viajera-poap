@@ -1,7 +1,7 @@
 // src/constants/abis/ArtesaniaBadgeABI.ts
 
-// 🟢 Dirección del contrato (Cámbiala tras el deploy en Sepolia)
-export const BADGE_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
+// 🟢 Dirección del contrato (Celo Mainnet)
+export const BADGE_ADDRESS = "0x77fb775be55fdfae9ed98c82665f1ab1bf19de7d" as const;
 
 export const BADGE_ABI = [
     // 🏷️ Identidad de la colección

@@ -37,7 +37,14 @@ export async function POST(request: Request) {
             args: [puebloIdBytes, cid, recipient], // Envío exacto al nuevo contrato
         });
 
-        return NextResponse.json({ success: true, txHash: hash });
+        console.log(`⏳ Esperando confirmación de Registro: ${hash}`);
+        const receipt = await client.waitForTransactionReceipt({ hash });
+
+        return NextResponse.json({ 
+            success: true, 
+            txHash: hash,
+            blockNumber: receipt.blockNumber.toString() 
+        });
 
     } catch (error: any) {
         console.error("❌ Error Robot Registry:", error.message);

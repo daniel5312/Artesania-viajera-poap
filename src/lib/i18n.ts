@@ -6,6 +6,7 @@ const dict: Record<string, Record<Lang, string>> = {
 
   // Bottom nav
   "nav.pasaporte": { es: "Pasaporte", en: "Passport" },
+  "nav.coleccion": { es: "Bóveda", en: "Vault" },
   "nav.tienda": { es: "Tienda", en: "Shop" },
   "nav.momentos": { es: "Momentos", en: "Moments" },
   "nav.comunidad": { es: "Comunidad", en: "Community" },

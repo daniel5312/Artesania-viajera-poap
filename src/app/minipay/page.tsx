@@ -14,8 +14,9 @@ import { TiendaView } from "@/components/tienda-view";
 import { ComunidadView } from "@/components/comunidad-view";
 import { MomentosView } from "@/components/momentos-view";
 import { LandingView } from "@/components/landing-view";
+import { CollectionView } from "@/components/collection-view";
 
-type Tab = "pasaporte" | "tienda" | "comunidad" | "momentos";
+type Tab = "pasaporte" | "tienda" | "comunidad" | "momentos" | "coleccion";
 
 function AppShell() {
   const [selectedSello, setSelectedSello] = useState<any | null>(null);
@@ -158,6 +159,7 @@ function AppShell() {
             />
           )}
           {activeTab === "tienda" && <TiendaView />}
+          {activeTab === "coleccion" && <CollectionView />}
           {activeTab === "comunidad" && <ComunidadView />}
         </main>
 

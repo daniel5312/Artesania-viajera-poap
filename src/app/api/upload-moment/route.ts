@@ -1,5 +1,4 @@
 /*import { NextResponse } from "next/server";
-import { PinataSDK } from "pinata-web3";
 
 // En App Router, para archivos grandes se configura así:
 export const maxDuration = 60;
@@ -30,29 +29,49 @@ export async function POST(request: Request) {
 }*/
 
 import { NextResponse } from "next/server";
-import { PinataSDK } from "pinata-web3";
 
-export const config = {
-    api: { bodyParser: { sizeLimit: '10mb' } }, // 🟢 Evita el error de "Payload Too Large"
-};
+// 🟢 En App Router la configuración de tamaño se maneja diferente o es automática en local
+// Pero eliminamos el 'export const config' porque es solo para Pages Router.
 
 export async function POST(request: Request) {
+    console.log("🚀 [API] Iniciando subida manual a Pinata...");
     try {
         const jwt = process.env.PINATA_JWT;
-        const gateway = process.env.NEXT_PUBLIC_GATEWAY_URL;
+        if (!jwt) {
+            return NextResponse.json({ error: "Faltan credenciales" }, { status: 500 });
+        }
 
-        if (!jwt) return NextResponse.json({ error: "Faltan credenciales" }, { status: 500 });
-
-        const pinata = new PinataSDK({ pinataJwt: jwt, pinataGateway: gateway });
         const data = await request.formData();
         const file = data.get("file") as File;
 
-        if (!file) return NextResponse.json({ error: "No hay archivo" }, { status: 400 });
+        if (!file) {
+            return NextResponse.json({ error: "No hay archivo" }, { status: 400 });
+        }
 
-        const uploadData = await pinata.upload.file(file);
-        return NextResponse.json({ success: true, ipfsUrl: uploadData.IpfsHash }); // 🟢 Retorna el CID directo
+        // 🟢 Petición Manual a la API de Pinata (Más compatible con Node 18+)
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${jwt}`,
+            },
+            body: formData,
+        });
+
+        if (!res.ok) {
+            const errorData = await res.json();
+            console.error("❌ Error API Pinata:", errorData);
+            throw new Error(errorData.error?.details || "Error en Pinata");
+        }
+
+        const uploadData = await res.json();
+        console.log("✅ Éxito Manual. CID:", uploadData.IpfsHash);
+
+        return NextResponse.json({ success: true, ipfsUrl: uploadData.IpfsHash });
     } catch (error: any) {
-        console.error("💥 Error Pinata:", error);
+        console.error("💥 Fallo Crítico Subida:", error.message);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 }

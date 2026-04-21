@@ -51,6 +51,7 @@ const erc20Abi = [
 const NFT_PRODUCTS = [
   {
     id: 1,
+    badgeId: 1,
     name: "Guatapé",
     price: "0.05",
     puebloId: "guatape_socalos",
@@ -60,6 +61,7 @@ const NFT_PRODUCTS = [
   },
   {
     id: 2,
+    badgeId: 2,
     name: "Sombrillas",
     price: "0.05",
     puebloId: "sombrillas_guatape",
@@ -69,6 +71,7 @@ const NFT_PRODUCTS = [
   },
   {
     id: 3,
+    badgeId: 3,
     name: "Jardín",
     price: "0.08",
     puebloId: "jardin_cafe",
@@ -78,6 +81,7 @@ const NFT_PRODUCTS = [
   },
   {
     id: 4,
+    badgeId: 4,
     name: "Envigado",
     price: "0.05",
     puebloId: "envigado_verde",
@@ -87,6 +91,7 @@ const NFT_PRODUCTS = [
   },
   {
     id: 5,
+    badgeId: 5,
     name: "Jericó",
     price: "0.01",
     puebloId: "jerico_cuero",
@@ -96,6 +101,7 @@ const NFT_PRODUCTS = [
   },
   {
     id: 6,
+    badgeId: 6,
     name: "Mompox",
     price: "0.02",
     puebloId: "mompox_filigrana",
@@ -105,6 +111,7 @@ const NFT_PRODUCTS = [
   },
   {
     id: 7,
+    badgeId: 7,
     name: "Cerámica El Carmen",
     price: "0.05",
     puebloId: "el_carmen_ceramica",
@@ -114,6 +121,7 @@ const NFT_PRODUCTS = [
   },
   {
     id: 8,
+    badgeId: 8,
     name: "Mochila Biota",
     price: "0.08",
     puebloId: "biota_line",
@@ -150,6 +158,7 @@ export function TiendaView() {
   const [paymentState, setPaymentState] = useState<"approving" | "paying" | null>(null);
   const [pendingProduct, setPendingProduct] = useState<{
     id: number;
+    badgeId: number;
     puebloId: string;
     recipient: string;
   } | null>(null);
@@ -177,10 +186,10 @@ export function TiendaView() {
 
     let cancelled = false;
 
-    const mintPassport = async () => {
+    const mintBadge = async () => {
       try {
         const token = await getAccessToken();
-        const res = await fetch("/api/mint-passport", {
+        const res = await fetch("/api/mint-badge", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -188,24 +197,23 @@ export function TiendaView() {
           },
           body: JSON.stringify({
             recipient: pendingProduct.recipient,
-            puebloId: pendingProduct.puebloId,
+            badgeId: pendingProduct.badgeId,
           }),
         });
 
         const data = await res.json();
         if (!res.ok || !data.success) {
-          throw new Error(data.error || "No se pudo mintear el sello.");
+          throw new Error(data.error || "No se pudo mintear la insignia.");
         }
 
         if (cancelled) return;
 
         setPaid((prev) => new Set(prev).add(pendingProduct.id));
-        // 🟢 CORRECCIÓN DE TEXTO: Ajustado para la experiencia de Tienda
-        alert("¡Apoyo entregado al artesano! Tu NFT ha sido enviado.");
+        alert("¡Insignia coleccionada! Apoyo entregado al artesano.");
       } catch (error: any) {
         if (cancelled) return;
         alert(
-          error.message || "El pago salió, pero el NFT no se pudo mintear.",
+          error.message || "Pago exitoso, pero hubo un problema con el NFT.",
         );
       } finally {
         if (cancelled) return;
@@ -217,7 +225,7 @@ export function TiendaView() {
       }
     };
 
-    void mintPassport();
+    void mintBadge();
 
     return () => {
       cancelled = true;
@@ -278,6 +286,7 @@ export function TiendaView() {
       });
       setPendingProduct({
         id: product.id,
+        badgeId: product.badgeId,
         puebloId: product.puebloId,
         recipient,
       });
@@ -369,6 +378,7 @@ export function TiendaView() {
 
       setPendingProduct({
         id: product.id,
+        badgeId: product.badgeId,
         puebloId: product.puebloId,
         recipient,
       });

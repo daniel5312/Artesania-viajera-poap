@@ -53,10 +53,15 @@ export async function POST(request: Request) {
             args: [recipient, BigInt(badgeId)],
         });
 
+        console.log(`⏳ Esperando confirmación de Bloque: ${hash}`);
+        const receipt = await client.waitForTransactionReceipt({ hash });
+        console.log(`✅ Confirmado en bloque: ${receipt.blockNumber}`);
+
         return NextResponse.json({
             success: true,
             txHash: hash,
-            msg: "¡Insignia entregada por el Robot! 🪄"
+            blockNumber: receipt.blockNumber.toString(),
+            msg: "¡Insignia entregada y confirmada en la Blockchain! 🪄"
         });
 
     } catch (error: any) {

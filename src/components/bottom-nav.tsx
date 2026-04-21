@@ -1,18 +1,19 @@
 "use client"
 
-import { Map, ShoppingBag, Users, Sparkles } from "lucide-react"
+import { Fingerprint, ShoppingBag, Users, Sparkles, Box } from "lucide-react"
 import { useTheme } from "@/lib/theme-context"
 import { t } from "@/lib/i18n"
 
-type Tab = "pasaporte" | "tienda" | "comunidad" | "momentos"
+type Tab = "pasaporte" | "tienda" | "comunidad" | "momentos" | "coleccion"
 
 interface BottomNavProps {
   activeTab: Tab
   onTabChange: (tab: Tab) => void
 }
 
-const tabs: { id: Tab; labelKey: string; icon: typeof Map }[] = [
-  { id: "pasaporte", labelKey: "nav.pasaporte", icon: Map },
+const tabs: { id: Tab; labelKey: string; icon: any }[] = [
+  { id: "pasaporte", labelKey: "nav.pasaporte", icon: Fingerprint },
+  { id: "coleccion", labelKey: "nav.coleccion", icon: Box },
   { id: "tienda", labelKey: "nav.tienda", icon: ShoppingBag },
   { id: "momentos", labelKey: "nav.momentos", icon: Sparkles },
   { id: "comunidad", labelKey: "nav.comunidad", icon: Users },
