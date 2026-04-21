@@ -56,58 +56,53 @@ export function PasaporteView({
   const [paginaActual, setPaginaActual] = useState(1);
   const itemsPorPagina = 15;
 
-  useEffect(() => {
-    if (userAddress) {
-      const sdk = new IdentitySDK({
-        env: "production",
-        account: userAddress as `0x${string}`,
-        publicClient: publicClient as any,
-        walletClient: {
-          account: { address: userAddress },
-          chain: celo,
-          signMessage: async ({ message }: any) => {
-            const msgToSign = typeof message === 'string' ? message : message.raw || message;
-            const hexMsg = typeof msgToSign === 'string' && msgToSign.startsWith('0x') ? msgToSign : stringToHex(msgToSign);
-            if (isMiniPayRoute) {
-               return await signMessageAsync({ message: msgToSign });
-            } else {
-               const wallet = wallets.find(w => w.address === userAddress) || wallets[0];
-               if (!wallet) throw new Error("No wallet found to sign");
-               const provider = await wallet.getEthereumProvider();
-               return await provider.request({ method: 'personal_sign', params: [hexMsg, userAddress] });
+  const checkIdentity = async () => {
+    if (!userAddress) return;
+    setCargando(true);
+    try {
+      let sdk = identitySDK;
+      if (!sdk) {
+        sdk = new IdentitySDK({
+          env: "production",
+          account: userAddress as `0x${string}`,
+          publicClient: publicClient as any,
+          walletClient: {
+            account: { address: userAddress },
+            chain: celo,
+            signMessage: async ({ message }: any) => {
+              const msgToSign = typeof message === 'string' ? message : message.raw || message;
+              const hexMsg = typeof msgToSign === 'string' && msgToSign.startsWith('0x') ? msgToSign : stringToHex(msgToSign);
+              if (isMiniPayRoute) {
+                 return await signMessageAsync({ message: msgToSign });
+              } else {
+                 const wallet = wallets.find(w => w.address === userAddress) || wallets[0];
+                 if (!wallet) throw new Error("No wallet found to sign");
+                 const provider = await wallet.getEthereumProvider();
+                 return await provider.request({ method: 'personal_sign', params: [hexMsg, userAddress] });
+              }
             }
-          }
-        } as any,
-      });
-      setIdentitySDK(sdk);
-    } else {
-      setIdentitySDK(null);
-      setIsWhitelisted(null);
-      setFvLink(null);
-    }
-  }, [userAddress, isMiniPayRoute, signMessageAsync, wallets]);
-
-  useEffect(() => {
-    async function checkIdentity() {
-      if (!userAddress || !identitySDK) return;
-      try {
-        const result = await identitySDK.getWhitelistedRoot(userAddress);
-        setIsWhitelisted(result.isWhitelisted);
-
-        if (!result.isWhitelisted) {
-          const link = await identitySDK.generateFVLink(
-            false,
-            window.location.href,
-            42220,
-          );
-          setFvLink(link);
-        }
-      } catch (e) {
-        console.error("Error checking identity:", e);
+          } as any,
+        });
+        setIdentitySDK(sdk);
       }
+
+      const result = await sdk.getWhitelistedRoot(userAddress);
+      setIsWhitelisted(result.isWhitelisted);
+
+      if (!result.isWhitelisted) {
+        const link = await sdk.generateFVLink(
+          false,
+          window.location.href,
+          42220,
+        );
+        setFvLink(link);
+      }
+    } catch (e) {
+      console.error("Error checking identity:", e);
+    } finally {
+      setCargando(false);
     }
-    checkIdentity();
-  }, [userAddress, identitySDK]);
+  };
 
   const leerPasaporte = useCallback(async () => {
     const walletAddress = userAddress;
@@ -226,10 +221,21 @@ export function PasaporteView({
       {authenticated && userAddress && (
         <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 shadow-inner">
           {isWhitelisted === null ? (
-            <div className="flex items-center gap-2 text-primary font-bold text-xs">
-              <Loader2 className="w-4 h-4 animate-spin" /> Verificando Identidad
-              G$...
-            </div>
+            <button
+              onClick={checkIdentity}
+              disabled={cargando}
+              className="flex items-center gap-2 bg-primary text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/90 transition-colors shadow-md disabled:opacity-50"
+            >
+              {cargando ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Verificando...
+                </>
+              ) : (
+                <>
+                  <Fingerprint size={14} /> Verificar Identidad G$
+                </>
+              )}
+            </button>
           ) : isWhitelisted ? (
             <>
               <div className="flex items-center gap-2 text-green-600 bg-green-500/10 px-4 py-2 rounded-full border border-green-500/20">

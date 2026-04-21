@@ -57,11 +57,11 @@ export function WalletHeader() {
   return (
     <header className="flex items-center justify-between px-5 pt-4 pb-2 sticky top-0 z-50 bg-background/80 backdrop-blur-md">
       <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 border border-primary/30">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 border border-primary/30 shadow-[0_0_10px_rgba(129,98,243,0.3)]">
           <span className="text-sm font-black text-primary">AV</span>
         </div>
         <h1 className="text-sm font-black tracking-tight text-foreground">
-          {t(lang, "header.title")}
+          Artesanía Viajera
         </h1>
       </div>
 

@@ -15,6 +15,9 @@ import imageCompression from "browser-image-compression";
 import { REGISTRY_CONTRACT } from "@/constants/contracts";
 import { ImageModal } from "./image-modal";
 
+import { usePrivy } from "@privy-io/react-auth";
+import { usePathname } from "next/navigation";
+
 export function MomentosView({
   selectedSello,
   onNavigate,
@@ -22,7 +25,12 @@ export function MomentosView({
   selectedSello: any;
   onNavigate?: (t: any) => void;
 }) {
-  const { address } = useAccount();
+  const { user } = usePrivy();
+  const { address: wagmiAddress } = useAccount();
+  const pathname = usePathname();
+  const isMiniPayRoute = pathname?.includes("/minipay");
+
+  const address = isMiniPayRoute ? wagmiAddress : user?.wallet?.address;
 
   // Estados
   const [isModalOpen, setIsModalOpen] = useState(false);

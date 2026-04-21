@@ -388,117 +388,144 @@ export function TiendaView() {
   const filteredProducts = NFT_PRODUCTS.filter((p) => p.type === category);
 
   return (
-    <div className="flex flex-col gap-5 px-1 pb-24">
+    <div className={`flex flex-col gap-6 px-2 pb-24 min-h-screen transition-colors ${isDarkMode ? "bg-gradient-to-b from-[#0F0A1F] to-[#000000] text-zinc-100" : "bg-gradient-to-b from-slate-50 to-slate-200 text-slate-900"}`}>
       <ImageModal
         src={imagenAmpliada}
         onClose={() => setImagenAmpliada(null)}
       />
 
-      <header className="pt-2 text-center">
-        <h2 className="text-xl font-black uppercase tracking-tighter text-foreground italic">
-          Mercado Local
+      <header className="pt-4 text-center">
+        <h2 className={`text-2xl font-black uppercase tracking-widest ${isDarkMode ? "text-white" : "text-primary"}`}>
+          Digital Museum
         </h2>
-        <p className="text-[9px] font-bold text-primary uppercase tracking-widest">
-          Celo Mainnet 🚀
+        <p className={`text-[10px] font-medium uppercase tracking-widest mt-1 ${isDarkMode ? "text-zinc-500" : "text-slate-500"}`}>
+          Preserving heritage on Celo Mainnet 🌐
         </p>
       </header>
 
-      <div className="flex gap-2 p-1.5 bg-card/50 backdrop-blur-sm rounded-2xl border border-primary/10">
+      <div className={`flex gap-2 p-1.5 backdrop-blur-md rounded-2xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white/80 border-primary/20 shadow-sm"}`}>
         <button
           onClick={() => setCategory("artesanias")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${category === "artesanias" ? "bg-primary text-white shadow-md" : "text-foreground/50 hover:bg-white/10"}`}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${category === "artesanias" ? "bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)]" : "text-zinc-500 hover:bg-white/10"}`}
         >
           <Store size={14} /> Artesanías
         </button>
         <button
           onClick={() => setCategory("sellos")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${category === "sellos" ? "bg-primary text-white shadow-md" : "text-foreground/50 hover:bg-white/10"}`}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${category === "sellos" ? "bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)]" : "text-zinc-500 hover:bg-white/10"}`}
         >
-          <Map size={14} /> Sellos (Sitios/Gemelos)
+          <Map size={14} /> Sellos Digitales
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
         {filteredProducts.map((nft) => (
           <div
             key={nft.id}
-            className={`relative flex flex-col rounded-2xl overflow-hidden border transition-all ${isDarkMode ? "bg-card border-white/5 shadow-lg shadow-black/20" : "bg-white border-gray-100 shadow-sm"}`}
+            className={`relative flex flex-col rounded-3xl overflow-hidden border transition-all group ${isDarkMode ? "border-white/5 bg-[#0a0a0a] shadow-[0_15px_40px_rgba(0,0,0,0.6)] hover:shadow-[0_20px_50px_rgba(129,98,243,0.15)]" : "border-primary/10 bg-white shadow-[0_10px_30px_rgba(0,0,0,0.05)] hover:shadow-xl hover:shadow-primary/10"}`}
           >
+            {/* Etiqueta Dorada Digital Twin */}
+            <div className={`absolute top-2 left-2 z-10 px-2 py-1 backdrop-blur-md rounded-full border ${isDarkMode ? "bg-black/60 border-amber-500/30" : "bg-white/80 border-amber-400"}`}>
+              <span className={`text-[8px] font-black uppercase tracking-widest flex items-center gap-1 ${isDarkMode ? "text-amber-500" : "text-amber-600"}`}>
+                ✨ Digital Twin Included
+              </span>
+            </div>
+
             <div
-              className="relative aspect-square w-full bg-muted cursor-pointer hover:opacity-90 transition-opacity"
+              className="relative aspect-square w-full cursor-pointer overflow-hidden"
               onClick={() => setImagenAmpliada(nft.img)}
             >
               <img
                 src={nft.img}
                 alt={nft.name}
-                className={`w-full h-full object-cover transition-all duration-500 ${paid.has(nft.id) ? "grayscale-0" : "grayscale-[0.6] opacity-80"}`}
+                className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${paid.has(nft.id) ? "grayscale-0" : "grayscale-[0.3]"}`}
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent opacity-80" />
+              
               {paid.has(nft.id) && (
-                <div className="absolute inset-0 bg-primary/20 flex items-center justify-center backdrop-blur-[1px]">
-                  <CheckCircle className="text-white h-6 w-6 drop-shadow-md animate-in zoom-in" />
+                <div className="absolute inset-0 bg-emerald-500/10 flex items-center justify-center backdrop-blur-sm">
+                  <CheckCircle className="text-emerald-400 h-10 w-10 drop-shadow-[0_0_15px_rgba(52,211,127,0.5)] animate-in zoom-in" />
                 </div>
               )}
             </div>
-            <div className="p-3 flex flex-col gap-1">
-              <span className="text-[10px] font-black uppercase truncate text-foreground text-center">
-                {nft.name}
-              </span>
-              <span className="text-[9px] font-mono text-primary font-bold text-center">
-                {nft.price}
-              </span>
+            
+            <div className={`p-3 flex flex-col gap-2 relative z-20 -mt-6 rounded-t-3xl ${isDarkMode ? "bg-[#0a0a0a]" : "bg-white"}`}>
+              <div className="flex flex-col justify-center items-center">
+                <span className={`text-[11px] font-black uppercase tracking-tight text-center ${isDarkMode ? "text-white" : "text-slate-900"}`}>
+                  {nft.name}
+                </span>
+                <span className={`text-[10px] font-mono font-bold mt-0.5 ${isDarkMode ? "text-primary/80" : "text-primary"}`}>
+                  {nft.price} CELO
+                </span>
+              </div>
 
-              {/* 🟢 MODIFICACIÓN UI: Botones lado a lado para CELO, cUSDT y G$ */}
-              <div className="mt-1 flex gap-1 w-full flex-wrap">
-                <button
-                  onClick={() => handlePayCelo(nft)}
-                  disabled={paying !== null || isConfirmingPayment || paid.has(nft.id)}
-                  className={`flex-1 min-w-[30%] py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 active:scale-95 ${paid.has(nft.id) ? "bg-green-500/10 text-green-500 border border-green-500/20" : "bg-primary text-white shadow-md hover:bg-primary/90"}`}
-                >
-                  {paying === nft.id || isConfirmingPayment ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : paid.has(nft.id) ? (
-                    "Mío"
-                  ) : (
-                    "CELO"
-                  )}
-                </button>
-
+              {/* Botones de pago estilo museo (USDT/G$ prominentes) */}
+              <div className="mt-1 flex flex-col gap-1 w-full">
+                {paid.has(nft.id) ? (
+                   <button disabled className="w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                     <CheckCircle size={12}/> Owned
+                   </button>
+                ) : (
+                  <div className="flex flex-col gap-1">
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => handlePayERC20(nft, USDT_ADDRESS, 6)}
+                        disabled={paying !== null || isConfirmingPayment}
+                        className={`flex-1 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 active:scale-95 ${isDarkMode ? "bg-white text-black hover:bg-zinc-200" : "bg-slate-900 text-white hover:bg-slate-800"}`}
+                      >
+                        {paying === nft.id && paymentState === "approving" ? <Loader2 className="h-3 w-3 animate-spin" /> : paying === nft.id && paymentState === "paying" ? "..." : "USDT"}
+                      </button>
+                      <button
+                        onClick={() => handlePayERC20(nft, G_DOLLAR_ADDRESS, 18)}
+                        disabled={paying !== null || isConfirmingPayment}
+                        className={`flex-1 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 active:scale-95 border ${isDarkMode ? "bg-white/10 text-white border-white/20 hover:bg-white/20" : "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"}`}
+                      >
+                        {paying === nft.id && paymentState === "approving" ? <Loader2 className="h-3 w-3 animate-spin" /> : paying === nft.id && paymentState === "paying" ? "..." : "G$"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Opción fallback CELO muy minimalista */}
                 {!paid.has(nft.id) && (
-                  <>
-                    <button
-                      onClick={() => handlePayERC20(nft, USDT_ADDRESS, 6)}
-                      disabled={paying !== null || isConfirmingPayment || paid.has(nft.id)}
-                      className="flex-1 min-w-[30%] py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 active:scale-95 bg-teal-600 text-white shadow-md hover:bg-teal-700 disabled:opacity-50"
-                    >
-                      {paying === nft.id && paymentState === "approving" ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : paying === nft.id && paymentState === "paying" ? (
-                        "..."
-                      ) : (
-                        "USDT"
-                      )}
-                    </button>
-
-                    <button
-                      onClick={() => handlePayERC20(nft, G_DOLLAR_ADDRESS, 18)}
-                      disabled={paying !== null || isConfirmingPayment || paid.has(nft.id)}
-                      className="flex-1 min-w-[30%] py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 active:scale-95 bg-blue-600 text-white shadow-md hover:bg-blue-700 disabled:opacity-50"
-                    >
-                      {paying === nft.id && paymentState === "approving" ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : paying === nft.id && paymentState === "paying" ? (
-                        "..."
-                      ) : (
-                        "G$"
-                      )}
-                    </button>
-                  </>
+                   <button
+                     onClick={() => handlePayCelo(nft)}
+                     disabled={paying !== null || isConfirmingPayment}
+                     className={`w-full py-1 text-[8px] font-bold uppercase transition-colors ${isDarkMode ? "text-zinc-500 hover:text-white" : "text-slate-400 hover:text-primary"}`}
+                   >
+                     {paying === nft.id || isConfirmingPayment ? "..." : "CELO Nativo"}
+                   </button>
                 )}
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      {/* --- REFI BENTO BOX FOOTER --- */}
+      <section className="mt-8 grid grid-cols-2 gap-3 animate-fade-in-up delay-200">
+        <div className={`col-span-2 border rounded-3xl p-5 relative overflow-hidden ${isDarkMode ? "bg-[#111] border-white/5" : "bg-white border-primary/10 shadow-sm"}`}>
+          <div className="absolute -right-10 -top-10 w-32 h-32 bg-primary/20 blur-[50px] rounded-full" />
+          <h3 className="text-xs font-black uppercase tracking-widest text-primary mb-1">Celo Impact</h3>
+          <p className={`text-[10px] leading-relaxed max-w-[80%] ${isDarkMode ? "text-zinc-400" : "text-slate-600"}`}>
+            Fully transparent ledger. Transactions use less energy than a single Google search.
+          </p>
+        </div>
+        
+        <div className={`border rounded-3xl p-4 flex flex-col justify-between ${isDarkMode ? "bg-[#111] border-white/5" : "bg-white border-primary/10 shadow-sm"}`}>
+          <h3 className={`text-[10px] font-black uppercase tracking-widest mb-2 ${isDarkMode ? "text-zinc-500" : "text-slate-400"}`}>UBI Funding</h3>
+          <p className={`text-[11px] font-medium ${isDarkMode ? "text-zinc-300" : "text-slate-700"}`}>
+            2% routed to GoodCollective Pools.
+          </p>
+        </div>
+
+        <div className={`border rounded-3xl p-4 flex flex-col justify-between ${isDarkMode ? "bg-[#111] border-white/5" : "bg-white border-primary/10 shadow-sm"}`}>
+          <h3 className={`text-[10px] font-black uppercase tracking-widest mb-2 ${isDarkMode ? "text-zinc-500" : "text-slate-400"}`}>Fiat Ref</h3>
+          <p className={`text-[11px] font-medium ${isDarkMode ? "text-zinc-300" : "text-slate-700"}`}>
+            1 USDT ≈ 4,000 COP local economy.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }

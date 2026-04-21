@@ -5,52 +5,20 @@ import { usePathname } from "next/navigation";
 import { useAccount, useDisconnect } from "wagmi";
 import {
   Sparkles,
-  ChevronRight,
   Wallet,
+  Globe,
+  Leaf,
+  Smartphone,
   Shield,
-  Zap,
-  Sun,
+  Heart,
   Moon,
-  LogOut,
-  CheckCircle2,
-  TrendingUp,
+  Sun,
 } from "lucide-react";
-import { useTheme } from "@/lib/theme-context";
 import { usePrivy } from "@privy-io/react-auth";
-
-// --- LOGO COPm (Basado en tu imagen) ---
-const COPmLogo = () => (
-  <div className="flex items-center gap-2">
-    <div className="relative w-8 h-8 rounded-full bg-linear-to-br from-[#4505A4] to-[#8162f3] flex items-center justify-center border-2 border-[#FBCC5C] shadow-sm">
-      <span className="text-[10px] font-black text-white italic">COP</span>
-    </div>
-    <span className="font-black text-xl tracking-tighter flex items-baseline">
-      <span className="text-[#4505A4] dark:text-white">COP</span>
-      <span className="text-[#FB923C] text-sm">m</span>
-    </span>
-  </div>
-);
-
-const features = [
-  {
-    title: "Estabilidad Digital",
-    desc: "Garantizada para tu confianza y seguridad financiera.",
-    icon: <Shield className="w-5 h-5 text-[#FBCC5C]" />,
-  },
-  {
-    title: "Transacciones Celo",
-    desc: "Rápidas y eficientes en la red Celo, respaldadas por el COP.",
-    icon: <Zap className="w-5 h-5 text-[#35D07F]" />,
-  },
-  {
-    title: "Auditoría en Cadena",
-    desc: "Transparencia total y cumplimiento continuo 24/7.",
-    icon: <CheckCircle2 className="w-5 h-5 text-[#8162f3]" />,
-  },
-];
+import { useTheme } from "@/lib/theme-context";
 
 export function LandingView({ onEnter }: { onEnter: () => void }) {
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode, toggleTheme, lang, toggleLang } = useTheme();
 
   // 🟢 Lógica Híbrida
   const {
@@ -86,27 +54,43 @@ export function LandingView({ onEnter }: { onEnter: () => void }) {
 
   return (
     <div
-      className={`relative min-h-screen transition-colors duration-500 font-sans ${isDarkMode ? "bg-[#0F0A1F] text-white" : "bg-[#fafafa] text-[#2D2D2D]"}`}
+      className={`relative min-h-screen font-sans transition-colors duration-500 pb-20 ${isDarkMode ? "text-zinc-100" : "text-slate-900"}`}
     >
       {/* --- HEADER --- */}
       <nav className="fixed top-0 left-0 right-0 z-50 px-4 pt-4">
         <div
-          className={`mx-auto max-w-md flex items-center justify-between p-3 rounded-full border backdrop-blur-xl shadow-lg transition-all ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white/80 border-[#4505A4]/10"}`}
+          className={`mx-auto max-w-md flex items-center justify-between p-3 rounded-full border backdrop-blur-xl shadow-lg transition-all ${isDarkMode ? "bg-black/40 border-white/10" : "bg-white/80 border-primary/20"}`}
         >
-          <COPmLogo />
+          <div className="flex items-center gap-2 pl-2">
+            <div
+              className={`w-2 h-2 rounded-full ${isDarkMode ? "bg-primary" : "bg-primary"} animate-pulse-glow`}
+            />
+            <span
+              className={`font-black text-sm tracking-widest uppercase ${isDarkMode ? "text-zinc-100" : "text-primary"}`}
+            >
+              Artesanía Viajera
+            </span>
+          </div>
+
           <div className="flex items-center gap-2">
             <button
+              onClick={toggleLang}
+              className={`p-2 rounded-full font-black text-xs transition-all ${isDarkMode ? "text-emerald-400 hover:bg-white/10" : "text-emerald-700 hover:bg-slate-200"}`}
+              aria-label="Toggle language"
+            >
+              {lang === "es" ? "EN" : "ES"}
+            </button>
+            <button
               onClick={toggleTheme}
-              className={`p-2 rounded-full transition-all ${isDarkMode ? "bg-white/10 text-yellow-400" : "bg-[#4505A4]/5 text-[#4505A4]"}`}
+              className={`p-2 rounded-full transition-all ${isDarkMode ? "text-yellow-400 hover:bg-white/10" : "text-slate-700 hover:bg-slate-200"}`}
+              aria-label="Toggle theme"
             >
               {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-
-            {/* 🟢 MAGIA: Oculta "Conectar" si estamos en MiniPay */}
             {authenticated ? (
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all bg-[#35D07F]/20 text-[#35D07F]"
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
               >
                 <Wallet size={14} />
                 {shortAddress}
@@ -115,10 +99,10 @@ export function LandingView({ onEnter }: { onEnter: () => void }) {
               !isMiniPayRoute && (
                 <button
                   onClick={login}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all bg-[#4505A4] text-white shadow-lg"
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${isDarkMode ? "bg-transparent text-primary border border-primary/50 shadow-[0_0_15px_rgba(129,98,243,0.3)] hover:bg-primary/10" : "bg-primary text-white shadow-md hover:bg-primary/90"}`}
                 >
                   <Wallet size={14} />
-                  Conectar
+                  {lang === "es" ? "Conectar" : "Connect"}
                 </button>
               )
             )}
@@ -127,74 +111,141 @@ export function LandingView({ onEnter }: { onEnter: () => void }) {
       </nav>
 
       {/* --- HERO SECTION --- */}
-      <div className="relative mx-auto max-w-md px-6 pt-32 pb-20 text-center">
-        <header className="animate-fade-in">
-          <h1 className="text-4xl font-black leading-tight tracking-tighter mb-4">
-            <span className="block text-[#4505A4] dark:text-white">
-              El Peso Colombiano
-            </span>
-            <span className="block bg-linear-to-r from-[#4505A4] to-[#FB923C] bg-clip-text text-transparent italic">
-              es Digital
+      <div className="relative mx-auto max-w-md px-6 pt-32 pb-8 flex flex-col justify-center text-center">
+        <div className="animate-fade-in-up space-y-2 flex flex-col justify-center items-center">
+          <div
+            className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${isDarkMode ? "bg-primary/10 border-primary/30 text-primary" : "bg-primary/5 border-primary/20 text-primary"}`}
+          >
+            <Globe size={12} /> ReFi Ecosystem
+          </div>
+
+          <h1
+            className="text-5xl sm:text-6xl font-black leading-[1.1] tracking-tighter"
+          >
+            <span
+              className={`text-transparent bg-clip-text bg-gradient-to-br ${isDarkMode ? "from-white to-zinc-600" : "from-slate-600 to-black"}`}
+            >
+              {lang === "es" ? "Artesanía" : "Nomad"}
+            </span>{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-black italic">
+              {lang === "es" ? "Viajera" : "Artisans"}
             </span>
           </h1>
-          <p className="text-sm font-medium opacity-70 mb-8 px-4">
-            Bienvenido a COPm, la stablecoin respaldada por pesos colombianos en
-            la red de Celo.
-          </p>
 
           <button
             onClick={onEnter}
-            className="w-full bg-linear-to-r from-[#4505A4] to-[#8162f3] text-white py-5 rounded-3xl font-black text-lg shadow-xl shadow-purple-500/20 active:scale-95 transition-all flex items-center justify-center gap-3"
+            className="mt-1 w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white py-4 rounded-full font-black text-sm uppercase tracking-widest shadow-xl hover:shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
           >
-            <Sparkles /> Empezar Experiencia
+            {lang === "es" ? "Explorar Colección" : "Explore Collection"} <Sparkles size={16} />
           </button>
-        </header>
+        </div>
+      </div>
 
-        {/* --- FEATURE CARDS --- */}
-        <div className="mt-16 grid gap-4 text-left">
-          {features.map((f, i) => (
-            <div
-              key={i}
-              className={`p-6 rounded-4xl border transition-all ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-[#4505A4]/5 shadow-sm"}`}
-            >
-              <div className="mb-3">{f.icon}</div>
-              <h3 className="font-black text-sm uppercase tracking-tight mb-1">
-                {f.title}
-              </h3>
-              <p className="text-xs opacity-60 leading-relaxed">{f.desc}</p>
-            </div>
-          ))}
+      {/* --- BENTO BOX INFORMATIVO --- */}
+      <div className="mx-auto max-w-md px-4 grid grid-cols-2 gap-3 mt-4">
+        {/* Core Value */}
+        {/* Core Value */}
+        <div
+          className={`col-span-2 p-6 rounded-[2rem] border relative overflow-hidden ${isDarkMode ? "bg-emerald-500/10 border-emerald-500/30 shadow-lg shadow-emerald-900/20" : "bg-emerald-50/80 border-emerald-200 shadow-md shadow-emerald-100"}`}
+        >
+          <div className="absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/20 blur-[30px] rounded-full" />
+          <Heart className="text-emerald-500 mb-4 h-8 w-8" />
+          <h2
+            className={`text-2xl font-black uppercase tracking-tight mb-2 ${isDarkMode ? "text-white" : "text-slate-900"}`}
+          >
+            {lang === "es" ? "El Encuentro Único" : "The Unique Encounter"}
+          </h2>
+          <p
+            className={`text-base sm:text-lg leading-relaxed ${isDarkMode ? "text-zinc-300" : "text-slate-700"}`}
+          >
+            {lang === "es" ? (
+              <>
+                Cada Phygital NFT documenta el encuentro irrepetible entre el{" "}
+                <strong>turista</strong> y el <strong>artesano</strong>, respaldando
+                sus creaciones en la blockchain.
+              </>
+            ) : (
+              <>
+                Each Phygital NFT documents the unrepeatable encounter between the{" "}
+                <strong>tourist</strong> and the <strong>artisan</strong>, backing
+                their creations on the blockchain.
+              </>
+            )}
+          </p>
         </div>
 
-        {/* --- BACKED BY SECTION --- */}
-        <section className="mt-20">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40 mb-8">
-            Respaldado por Expertos
-          </h4>
-          <div className="flex items-center justify-center gap-8 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all">
-            <div className="flex items-center gap-1 font-bold text-sm">
-              <div className="w-4 h-4 border-2 border-current rotate-45" />{" "}
-              MENTO
-            </div>
-            <div className="w-8 h-8 rounded-full border-2 border-current flex items-center justify-center text-[8px] font-black">
-              COP
-            </div>
-            <div className="flex items-center gap-1 font-bold text-sm italic underline decoration-[#35D07F]">
-              CELO
-            </div>
-          </div>
-        </section>
+        {/* Celo & MiniPay */}
+        <div
+          className={`p-6 rounded-[2rem] border relative overflow-hidden flex flex-col justify-center items-center text-center ${isDarkMode ? "bg-emerald-500/10 border-emerald-500/30 shadow-lg shadow-emerald-900/20" : "bg-emerald-50/80 border-emerald-200 shadow-md shadow-emerald-100"}`}
+        >
+          <div className="absolute -left-4 -top-4 w-16 h-16 bg-emerald-500/20 blur-[20px] rounded-full" />
+          <Smartphone className="text-[#35D07F] mb-3 h-8 w-8" />
+          <h3
+            className={`text-xl font-black uppercase tracking-tight ${isDarkMode ? "text-white" : "text-slate-900"}`}
+          >
+            MiniPay & Celo
+          </h3>
+        </div>
+
+        {/* GoodDollar UBI */}
+        <div
+          className={`p-6 rounded-[2rem] border relative overflow-hidden flex flex-col justify-center items-center text-center ${isDarkMode ? "bg-emerald-500/10 border-emerald-500/30 shadow-lg shadow-emerald-900/20" : "bg-emerald-50/80 border-emerald-200 shadow-md shadow-emerald-100"}`}
+        >
+          <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-emerald-500/20 blur-[20px] rounded-full" />
+          <Shield className="text-[#00A3FF] mb-3 h-8 w-8" />
+          <h3
+            className={`text-xl font-black uppercase tracking-tight ${isDarkMode ? "text-white" : "text-slate-900"}`}
+          >
+            GoodDollar
+          </h3>
+        </div>
+
+        {/* Impact Pools */}
+        <div
+          className={`col-span-2 p-6 rounded-[2rem] border relative overflow-hidden flex flex-col items-center justify-center text-center ${isDarkMode ? "bg-emerald-500/10 border-emerald-500/30 shadow-lg shadow-emerald-900/20" : "bg-emerald-50/80 border-emerald-200 shadow-md shadow-emerald-100"}`}
+        >
+          <div className="absolute -left-8 -bottom-8 w-24 h-24 bg-emerald-500/20 blur-[30px] rounded-full" />
+          <Leaf
+            className={`h-10 w-10 mb-2 ${isDarkMode ? "text-emerald-400" : "text-emerald-500"}`}
+          />
+          <h2
+            className={`text-2xl font-black uppercase tracking-tight z-10 ${isDarkMode ? "text-emerald-400" : "text-emerald-600"}`}
+          >
+            {lang === "es" ? "Ruteo de Impacto" : "Impact Routing"}
+          </h2>
+        </div>
       </div>
 
-      {/* Decorative Orbs */}
+      {/* Background Image, Overlays & Orbs */}
       <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+        {/* Blurred Background Image */}
         <div
-          className={`absolute -top-24 -left-24 w-96 h-96 blur-[120px] rounded-full ${isDarkMode ? "bg-purple-900/30" : "bg-purple-100"}`}
+          className={`absolute inset-0 bg-cover bg-no-repeat scale-105 blur-[6px] ${isDarkMode ? "opacity-60" : "opacity-80"}`}
+          style={{ backgroundImage: "url('/images/IMG_20240818_020953188_HDR_AE.jpg')", backgroundPosition: "center 30%" }}
+        />
+        {/* Gradient Overlay for Text Legibility */}
+        <div
+          className={`absolute inset-0 ${isDarkMode ? "bg-gradient-to-b from-[#02120A]/70 via-[#062417]/50 to-[#000000]/80" : "bg-gradient-to-b from-emerald-50/60 via-emerald-100/40 to-emerald-50/80"}`}
+        />
+        {/* Orbs */}
+        <div
+          className={`absolute top-1/4 -left-32 w-96 h-96 blur-[150px] rounded-full ${isDarkMode ? "bg-emerald-500/20" : "bg-emerald-300/20"}`}
         />
         <div
-          className={`absolute top-1/2 -right-24 w-80 h-80 blur-[100px] rounded-full ${isDarkMode ? "bg-orange-900/20" : "bg-orange-50"}`}
+          className={`absolute bottom-1/4 -right-32 w-96 h-96 blur-[150px] rounded-full ${isDarkMode ? "bg-emerald-400/10" : "bg-emerald-200/30"}`}
         />
       </div>
+
+      {/* Footer */}
+      <footer
+        className={`absolute bottom-0 left-0 right-0 py-6 text-center border-t transition-colors ${isDarkMode ? "border-white/10" : "border-slate-200"}`}
+      >
+        <p
+          className={`text-sm font-medium ${isDarkMode ? "text-zinc-500" : "text-slate-500"}`}
+        >
+          © {new Date().getFullYear()} Artesanía Viajera. {lang === "es" ? "Construido en Celo." : "Built on Celo."}
+        </p>
+      </footer>
     </div>
   );
 }
