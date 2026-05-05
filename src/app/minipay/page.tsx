@@ -6,17 +6,22 @@ import { useAccount, useConnect, useConnectors } from "wagmi";
 import { usePrivy } from "@privy-io/react-auth";
 import { Loader2 } from "lucide-react";
 
+import dynamic from "next/dynamic";
 import { ThemeProvider, useTheme } from "@/lib/theme-context";
+import { GlobalProvider } from "@/lib/global-context";
+import { UbiFlowProvider } from "@/lib/ubi-flow-context";
 import { WalletHeader } from "@/components/wallet-header";
 import { BottomNav } from "@/components/bottom-nav";
-import { PasaporteView } from "@/components/pasaporte-view";
-import { TiendaView } from "@/components/tienda-view";
-import { ComunidadView } from "@/components/comunidad-view";
-import { MomentosView } from "@/components/momentos-view";
 import { LandingView } from "@/components/landing-view";
-import { CollectionView } from "@/components/collection-view";
 
-type Tab = "pasaporte" | "tienda" | "comunidad" | "momentos" | "coleccion";
+const PasaporteView = dynamic(() => import("@/components/pasaporte-view").then(m => m.PasaporteView), { ssr: false });
+const TiendaView = dynamic(() => import("@/components/tienda-view").then(m => m.TiendaView), { ssr: false });
+const ComunidadView = dynamic(() => import("@/components/comunidad-view").then(m => m.ComunidadView), { ssr: false });
+const MomentosView = dynamic(() => import("@/components/momentos-view").then(m => m.MomentosView), { ssr: false });
+const CollectionView = dynamic(() => import("@/components/collection-view").then(m => m.CollectionView), { ssr: false });
+const DashboardWalletView = dynamic(() => import("@/components/dashboard-wallet-view").then(m => m.DashboardWalletView), { ssr: false });
+
+type Tab = "pasaporte" | "tienda" | "comunidad" | "momentos" | "coleccion" | "dashboard";
 
 function AppShell() {
   const [selectedSello, setSelectedSello] = useState<any | null>(null);
@@ -161,6 +166,7 @@ function AppShell() {
           {activeTab === "tienda" && <TiendaView />}
           {activeTab === "coleccion" && <CollectionView />}
           {activeTab === "comunidad" && <ComunidadView />}
+          {activeTab === "dashboard" && <DashboardWalletView />}
         </main>
 
         <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
@@ -192,10 +198,14 @@ function AppShell() {
 
 export default function MiniPayPage() {
   return (
-    <ThemeProvider>
-      <Suspense fallback={<div className="min-h-screen bg-[#0F0A1F]" />}>
-        <AppShell />
-      </Suspense>
-    </ThemeProvider>
+    <GlobalProvider>
+      <UbiFlowProvider>
+        <ThemeProvider>
+          <Suspense fallback={<div className="min-h-screen bg-[#0F0A1F]" />}>
+            <AppShell />
+          </Suspense>
+        </ThemeProvider>
+      </UbiFlowProvider>
+    </GlobalProvider>
   );
 }

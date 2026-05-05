@@ -11,7 +11,7 @@ import {
   useConnect,
   useConnectors,
 } from "wagmi";
-import { parseEther, getAddress, parseUnits, createPublicClient, http } from "viem";
+import { parseEther, getAddress, parseUnits, createPublicClient, http, encodeAbiParameters } from "viem";
 import { usePathname } from "next/navigation";
 import { celo } from "viem/chains";
 import { useTheme } from "@/lib/theme-context";
@@ -346,35 +346,66 @@ export function TiendaView() {
 
       const amount = parseUnits(product.price, decimals);
 
-      // Paso 1: Check Allowance & Approve
-      const allowance = await publicClient.readContract({
-        address: tokenAddress as `0x${string}`,
-        abi: erc20Abi,
-        functionName: "allowance",
-        args: [recipient as `0x${string}`, targetContractAddress as `0x${string}`],
-      });
+      // Flujo ERC-677: Un solo clic (Cero Approve) para G$
+      let tx;
+      if (tokenAddress === G_DOLLAR_ADDRESS) {
+        setPaymentState("paying");
+        const transferAndCallAbi = [
+          {
+            name: "transferAndCall",
+            type: "function",
+            stateMutability: "nonpayable",
+            inputs: [
+              { name: "_to", type: "address" },
+              { name: "_value", type: "uint256" },
+              { name: "_data", type: "bytes" },
+            ],
+            outputs: [{ name: "", type: "bool" }],
+          },
+        ] as const;
 
-      if (allowance < amount) {
-        const approveTx = await writeContractAsync({
+        const data = encodeAbiParameters(
+          [{ type: "address" }],
+          [getAddress(product.wallet)],
+        );
+
+        tx = await writeContractAsync({
+          address: tokenAddress as `0x${string}`,
+          abi: transferAndCallAbi,
+          functionName: "transferAndCall",
+          args: [targetContractAddress as `0x${string}`, amount, data],
+          chainId: celo.id,
+        });
+      } else {
+        // Flujo ERC-20 Clásico (Approve + Transfer) para USDT
+        const allowance = await publicClient.readContract({
           address: tokenAddress as `0x${string}`,
           abi: erc20Abi,
-          functionName: "approve",
-          args: [targetContractAddress as `0x${string}`, amount],
+          functionName: "allowance",
+          args: [recipient as `0x${string}`, targetContractAddress as `0x${string}`],
         });
-        
-        await publicClient.waitForTransactionReceipt({ hash: approveTx });
+
+        if (allowance < amount) {
+          const approveTx = await writeContractAsync({
+            address: tokenAddress as `0x${string}`,
+            abi: erc20Abi,
+            functionName: "approve",
+            args: [targetContractAddress as `0x${string}`, amount],
+          });
+
+          await publicClient.waitForTransactionReceipt({ hash: approveTx });
+        }
+
+        setPaymentState("paying");
+
+        tx = await writeContractAsync({
+          address: targetContractAddress as `0x${string}`,
+          abi: REFI_SPLITTER_CONTRACT.abi,
+          functionName: "comprarArtesaniaERC20",
+          args: [tokenAddress as `0x${string}`, getAddress(product.wallet), amount],
+          chainId: celo.id,
+        });
       }
-
-      setPaymentState("paying");
-
-      // Paso 2: Pay (comprarArtesaniaERC20)
-      const tx = await writeContractAsync({
-        address: targetContractAddress as `0x${string}`,
-        abi: REFI_SPLITTER_CONTRACT.abi,
-        functionName: "comprarArtesaniaERC20",
-        args: [tokenAddress as `0x${string}`, getAddress(product.wallet), amount],
-        chainId: celo.id,
-      });
 
       setPendingProduct({
         id: product.id,

@@ -7,16 +7,93 @@ import {
   Globe,
   Image as ImageIcon,
   X,
+  Heart,
+  MessageCircle,
+  MapPin,
+  Users,
+  ShoppingBag,
 } from "lucide-react";
 import { useAccount, useReadContract } from "wagmi";
 import { celo } from "viem/chains";
-import { stringToHex, pad } from "viem"; // 🟢 IMPORTANTE: Para convertir IDs a bytes32
+import { stringToHex, pad } from "viem";
 import imageCompression from "browser-image-compression";
 import { REGISTRY_CONTRACT } from "@/constants/contracts";
 import { ImageModal } from "./image-modal";
+import { useTheme } from "@/lib/theme-context";
+import { t } from "@/lib/i18n";
 
 import { usePrivy } from "@privy-io/react-auth";
 import { usePathname } from "next/navigation";
+
+const productFilters = [
+  { id: "todos", labelKey: "momentos.all" },
+  { id: "manilla", labelKey: "product.manilla.name" },
+  { id: "mochila", labelKey: "product.mochila.name" },
+  { id: "sombrero", labelKey: "product.sombrero.name" },
+];
+
+const moments = [
+  {
+    id: 1,
+    buyerName: "Ana Castillo",
+    buyerInitials: "AC",
+    buyerColor: "bg-primary",
+    productKey: "product.manilla.name",
+    productId: "manilla",
+    image: "https://images.unsplash.com/photo-1542382156909-9ae37b3f56fd?w=800&q=80",
+    captionKey: "moment.1.caption",
+    location: "Guatape, Antioquia",
+    timeKey: "time.2h",
+    likes: 24,
+    comments: 5,
+    circle: 47,
+  },
+  {
+    id: 2,
+    buyerName: "Carlos Mejia",
+    buyerInitials: "CM",
+    buyerColor: "bg-chart-5",
+    productKey: "product.mochila.name",
+    productId: "mochila",
+    image: "https://images.unsplash.com/photo-1588668214407-6ea9a6d8c272?w=800&q=80",
+    captionKey: "moment.2.caption",
+    location: "Piedra del Penol",
+    timeKey: "time.5h",
+    likes: 57,
+    comments: 12,
+    circle: 31,
+  },
+  {
+    id: 3,
+    buyerName: "Lucia Rios",
+    buyerInitials: "LR",
+    buyerColor: "bg-chart-4",
+    productKey: "product.manilla.name",
+    productId: "manilla",
+    image: "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=800&q=80",
+    captionKey: "moment.3.caption",
+    location: "Mercado Guatape",
+    timeKey: "time.1d",
+    likes: 18,
+    comments: 3,
+    circle: 47,
+  },
+  {
+    id: 4,
+    buyerName: "Miguel Arenas",
+    buyerInitials: "MA",
+    buyerColor: "bg-accent",
+    productKey: "product.sombrero.name",
+    productId: "sombrero",
+    image: "https://images.unsplash.com/photo-1518104593124-ac2e82a5eb9b?w=800&q=80",
+    captionKey: "moment.4.caption",
+    location: "Embalse Guatape",
+    timeKey: "time.2d",
+    likes: 33,
+    comments: 7,
+    circle: 22,
+  },
+];
 
 export function MomentosView({
   selectedSello,
@@ -142,7 +219,7 @@ export function MomentosView({
 
   const isWorking = procesando;
 
-  if (!selectedSello) return null;
+  if (!selectedSello) return <MomentosFeed />;
 
   return (
     <div className="flex flex-col gap-6 relative pb-36">
@@ -152,25 +229,38 @@ export function MomentosView({
       />
 
       {/* 1. SELLO GIGANTE */}
-      <div className="flex flex-col items-center justify-center pt-6 pb-2">
+      <div className="flex flex-col items-center justify-center pt-8 pb-4">
         <div
           className="relative cursor-pointer hover:scale-105 transition-transform"
           onClick={() => setImagenAmpliada(selectedSello.image)}
         >
-          <div className="absolute -inset-4 bg-linear-to-tr from-purple-500/20 to-amber-500/20 rounded-[3rem] blur-2xl animate-pulse" />
+          <div className="absolute -inset-6 bg-linear-to-tr from-primary/30 to-teal-500/30 rounded-[3rem] blur-3xl animate-pulse" />
           <img
             src={selectedSello.image}
-            className="relative w-40 h-40 rounded-2rem object-cover border-4px border-card shadow-2xl"
+            className="relative w-44 h-44 rounded-3xl object-cover border-[6px] border-card shadow-2xl"
             alt={selectedSello.name}
           />
         </div>
         <h2 className="text-3xl font-black text-foreground mt-6 text-center tracking-tighter">
           {selectedSello.name}
         </h2>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">
+          Sello Digital Verificado
+        </p>
       </div>
 
       {/* 2. ÁLBUM */}
-      <div className="px-2">
+      <div className="px-4">
+        <div className="flex items-center justify-between mb-4 mt-2">
+          <h3 className="text-lg font-black uppercase tracking-widest text-primary flex items-center gap-2">
+            <ImageIcon size={20} className="text-teal-500" />
+            Álbum
+          </h3>
+          <span className="text-xs font-bold text-muted-foreground bg-primary/10 px-3 py-1 rounded-full">
+            {todasLasFotos.length} Fotos
+          </span>
+        </div>
+        
         <div className="grid grid-cols-3 gap-3">
           <button
             onClick={() => {
@@ -304,99 +394,11 @@ export function MomentosView({
     </div>
   );
 }
-/*"use client";
 
-import { useState, useRef } from "react";
-import { Heart, MessageCircle, MapPin, Users, ShoppingBag } from "lucide-react";
-import Image from "next/image";
-import { useTheme } from "@/lib/theme-context";
-import { t } from "@/lib/i18n";
-import { useReadContract, useAccount } from "wagmi";
-import { ARTESANIA_ABI } from "../contants/abis/ArtesaniaABI"; // Asegúrate de tener balanceOf y tokenURI en el ABI
-
-const productFilters = [
-  { id: "todos", labelKey: "momentos.all" },
-  { id: "manilla", labelKey: "product.manilla.name" },
-  { id: "mochila", labelKey: "product.mochila.name" },
-  { id: "sombrero", labelKey: "product.sombrero.name" },
-];
-
-const moments = [
-  {
-    id: 1,
-    buyerName: "Ana Castillo",
-    buyerInitials: "AC",
-    buyerColor: "bg-primary",
-    productKey: "product.manilla.name",
-    productId: "manilla",
-    image: "/images/community-1.jpg",
-    captionKey: "moment.1.caption",
-    location: "Guatape, Antioquia",
-    timeKey: "time.2h",
-    likes: 24,
-    comments: 5,
-    circle: 47,
-  },
-  {
-    id: 2,
-    buyerName: "Carlos Mejia",
-    buyerInitials: "CM",
-    buyerColor: "bg-chart-5",
-    productKey: "product.mochila.name",
-    productId: "mochila",
-    image: "/images/community-2.jpg",
-    captionKey: "moment.2.caption",
-    location: "Piedra del Penol",
-    timeKey: "time.5h",
-    likes: 57,
-    comments: 12,
-    circle: 31,
-  },
-  {
-    id: 3,
-    buyerName: "Lucia Rios",
-    buyerInitials: "LR",
-    buyerColor: "bg-chart-4",
-    productKey: "product.manilla.name",
-    productId: "manilla",
-    image: "/images/community-3.jpg",
-    captionKey: "moment.3.caption",
-    location: "Mercado Guatape",
-    timeKey: "time.1d",
-    likes: 18,
-    comments: 3,
-    circle: 47,
-  },
-  {
-    id: 4,
-    buyerName: "Miguel Arenas",
-    buyerInitials: "MA",
-    buyerColor: "bg-accent",
-    productKey: "product.sombrero.name",
-    productId: "sombrero",
-    image: "/images/community-4.jpg",
-    captionKey: "moment.4.caption",
-    location: "Embalse Guatape",
-    timeKey: "time.2d",
-    likes: 33,
-    comments: 7,
-    circle: 22,
-  },
-];
-
-export function MomentosView() {
+function MomentosFeed() {
   const [activeFilter, setActiveFilter] = useState("todos");
   const [liked, setLiked] = useState<Set<number>>(new Set());
-  const scrollRef = useRef<HTMLDivElement>(null);
   const { isDarkMode, lang } = useTheme();
-  const { address } = useAccount();
-  const { data: balance } = useReadContract({
-    address: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS as `0x${string}`,
-    abi: ARTESANIA_ABI,
-    functionName: "balanceOf",
-    args: address ? [address] : undefined,
-  });
-  console.log("Total de momentos:", balance?.toString());
 
   const filtered =
     activeFilter === "todos"
@@ -418,7 +420,7 @@ export function MomentosView() {
 
   return (
     <div className="flex flex-col gap-4 px-5 pb-24">
-      {/* Header *}
+      {/* Header */}
       <div>
         <h2 className="text-base font-semibold text-foreground">
           {t(lang, "momentos.title")}
@@ -428,9 +430,8 @@ export function MomentosView() {
         </p>
       </div>
 
-      {/* Product filter pills }
+      {/* Product filter pills */}
       <div
-        ref={scrollRef}
         className="flex gap-2 overflow-x-auto pb-1 scrollbar-none"
         style={{ scrollbarWidth: "none" }}
       >
@@ -449,14 +450,14 @@ export function MomentosView() {
         ))}
       </div>
 
-      {/* Timeline feed }
+      {/* Timeline feed */}
       <div className="flex flex-col gap-4">
         {filtered.map((moment) => (
           <div
             key={moment.id}
             className={`overflow-hidden rounded-3xl ${cardClass}`}
           >
-            {/* Buyer header }
+            {/* Buyer header */}
             <div className="flex items-center gap-3 p-4 pb-3">
               <div
                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${moment.buyerColor}`}
@@ -480,17 +481,16 @@ export function MomentosView() {
               </div>
             </div>
 
-            {/* Photo }
+            {/* Photo */}
             <div className="relative h-52 w-full">
-              <Image
+              <img
                 src={moment.image}
                 alt={t(lang, moment.captionKey)}
-                fill
-                className="object-cover"
+                className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-linear-to-t from-card/60 via-transparent to-transparent" />
 
-              {/* Location tag }
+              {/* Location tag */}
               <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full bg-background/60 px-2.5 py-1 backdrop-blur-sm">
                 <MapPin className="h-3 w-3 text-accent" />
                 <span className="text-[10px] font-medium text-foreground">
@@ -499,13 +499,13 @@ export function MomentosView() {
               </div>
             </div>
 
-            {/* Content }
+            {/* Content */}
             <div className="flex flex-col gap-3 p-4">
               <p className="text-sm leading-relaxed text-muted-foreground">
                 {t(lang, moment.captionKey)}
               </p>
 
-              {/* Circle info + actions }
+              {/* Circle info + actions */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <button
@@ -539,7 +539,7 @@ export function MomentosView() {
                   </button>
                 </div>
 
-                {/* Circle badge }
+                {/* Circle badge */}
                 <div className="flex items-center gap-1.5 rounded-full bg-teal/10 px-2.5 py-1">
                   <Users className="h-3 w-3 text-teal" />
                   <span className="text-[10px] font-semibold text-teal">
@@ -552,9 +552,9 @@ export function MomentosView() {
         ))}
       </div>
 
-      {/* CTA Banner }
+      {/* CTA Banner */}
       <div
-        className={`rounded-3xl p-5 text-center ${
+        className={`rounded-3xl p-5 text-center mt-4 ${
           isDarkMode
             ? "border border-primary/30 bg-primary/5"
             : "bg-primary/5 shadow-md"
@@ -575,4 +575,4 @@ export function MomentosView() {
       </div>
     </div>
   );
-}*/
+}

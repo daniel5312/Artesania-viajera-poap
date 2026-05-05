@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { useAccount, useSignMessage } from "wagmi";
 import { useTheme } from "@/lib/theme-context";
 import { IdentitySDK } from "@goodsdks/citizen-sdk";
-import { createPublicClient, http, stringToHex } from "viem";
+import { createPublicClient, http, stringToHex, formatUnits } from "viem";
+import { useUBIClaim } from "@/hooks/useUBIClaim";
 import { celo } from "viem/chains";
 import { PASSPORT_CONTRACT } from "@/constants/contracts";
 import {
@@ -55,7 +56,9 @@ export function PasaporteView({
   const [paginaActual, setPaginaActual] = useState(1);
   const itemsPorPagina = 15;
 
-  const checkIdentity = async () => {
+  const { checkEntitlement, claimUBI, isClaiming, entitlement, hasClaim } = useUBIClaim();
+
+  const handleCheckIdentity = async () => {
     if (!userAddress) return;
     setCargando(true);
     try {
@@ -95,6 +98,9 @@ export function PasaporteView({
           42220,
         );
         setFvLink(link);
+      }
+      if (result.isWhitelisted) {
+        checkEntitlement();
       }
     } catch (e) {
       console.error("Error checking identity:", e);
@@ -223,43 +229,7 @@ export function PasaporteView({
         </p>
       </header>
 
-      {/* 🟢 SECCIÓN: Identidad GoodDollar */}
-      {authenticated && userAddress && (
-        <div className={`p-6 rounded-[2.5rem] border flex flex-col items-center justify-center gap-4 shadow-xl relative overflow-hidden ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-primary/20"}`}>
-          <div className="absolute -right-10 -top-10 w-32 h-32 bg-primary/20 blur-[40px] rounded-full" />
-          
-          <div className="flex items-center gap-3 w-full">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Fingerprint size={24} className="text-primary" />
-            </div>
-            <div className="flex-1">
-                <h3 className="text-[10px] font-black uppercase tracking-widest opacity-50">G$ Identity</h3>
-                {isWhitelisted === null ? (
-                    <button
-                        onClick={checkIdentity}
-                        disabled={cargando}
-                        className="text-primary font-bold text-xs hover:underline disabled:opacity-50"
-                    >
-                        {cargando ? "Verificando..." : "Verificar ahora →"}
-                    </button>
-                ) : isWhitelisted ? (
-                    <span className="text-emerald-500 font-black text-xs uppercase tracking-tight flex items-center gap-1">
-                        <UserCheck size={14} /> Verified Human
-                    </span>
-                ) : (
-                    <a href={fvLink || "#"} target="_blank" className="text-blue-500 font-bold text-xs">
-                        Obtener Sello G$ →
-                    </a>
-                )}
-            </div>
-            {isWhitelisted && (
-                <a href="https://wallet.gooddollar.org/" target="_blank" className="p-2 rounded-xl bg-primary text-white shadow-lg">
-                    <Coins size={18} />
-                </a>
-            )}
-          </div>
-        </div>
-      )}
+      {/* G$ Identity movido al Dashboard-Wallet */}
 
       <div className="h-60 w-full overflow-hidden rounded-[3rem] border-4 border-card shadow-2xl z-0">
         <MapaReal />
@@ -299,11 +269,14 @@ export function PasaporteView({
             <div
               key={s.id}
               onClick={() => onStampClick(s)}
-              className="bg-card rounded-2xl overflow-hidden shadow-md active:scale-95 cursor-pointer border border-white/5 relative aspect-square group"
+              className="bg-card rounded-2xl overflow-hidden shadow-lg active:scale-95 cursor-pointer border border-primary/20 relative aspect-square group"
             >
-              <img src={s.image} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt="Sello" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center p-2">
-                <p className="text-[6px] font-black uppercase text-white truncate">{s.name}</p>
+              <img src={s.image} className="w-full h-full object-cover transition-transform group-hover:scale-105" alt="Sello" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-transparent to-transparent flex flex-col items-center justify-end p-2 pb-3">
+                <span className="text-[7px] font-black uppercase text-white truncate mb-1 opacity-80">{s.name}</span>
+                <button className="bg-primary hover:bg-primary/90 text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-full shadow-xl border border-white/20 flex items-center gap-1 w-full justify-center">
+                  📸 Álbum
+                </button>
               </div>
             </div>
           ))}
