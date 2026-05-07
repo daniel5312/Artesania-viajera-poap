@@ -100,7 +100,7 @@ export function PasaporteView({
         setFvLink(link);
       }
       if (result.isWhitelisted) {
-        checkEntitlement();
+        checkEntitlement(userAddress as string);
       }
     } catch (e) {
       console.error("Error checking identity:", e);

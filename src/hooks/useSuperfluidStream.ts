@@ -98,6 +98,7 @@ export function useSuperfluidStream() {
         ],
         account: getAddress(accountAddress),
         chain: celo,
+        gas: 800000n, // Bypass Viem local gas estimation
       });
       return { success: true, hash: tx };
     } catch (error: any) {
@@ -122,6 +123,7 @@ export function useSuperfluidStream() {
         ],
         account: getAddress(accountAddress),
         chain: celo,
+        gas: 800000n, // Bypass Viem local gas estimation
       });
       return { success: true, hash: tx };
     } catch (error: any) {

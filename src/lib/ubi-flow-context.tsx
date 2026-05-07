@@ -22,6 +22,9 @@ const UbiFlowContext = createContext<UbiFlowContextType | undefined>(undefined);
 
 const PROJECT_ID = process.env.NEXT_PUBLIC_WC_PROJECT_ID || "dfa4d89eaa7e8833efe6d378cd938ce2";
 
+let isGlobalInitialized = false;
+let globalProviderPromise: Promise<UniversalProvider> | null = null;
+
 export function UbiFlowProvider({ children }: { children: ReactNode }) {
   const [provider, setProvider] = useState<UniversalProvider | null>(null);
   const [address, setAddress] = useState<string | null>(null);
@@ -32,14 +35,25 @@ export function UbiFlowProvider({ children }: { children: ReactNode }) {
   const [walletClientB, setWalletClientB] = useState<any | null>(null);
 
   useEffect(() => {
-    let isInitialized = false;
-    // Evitar hidratación mismatch y sesiones fantasma
     const initProvider = async () => {
-      if (isInitialized) return;
-      isInitialized = true;
+      if (globalProviderPromise) {
+        // Si ya hay una promesa en curso o resuelta, la esperamos
+        try {
+          const p = await globalProviderPromise;
+          setProvider(p);
+          checkSession(p);
+        } catch (e) {
+          console.error(e);
+        }
+        return;
+      }
+      
+      if (isGlobalInitialized) return;
+      isGlobalInitialized = true;
+      
       try {
         console.log("Iniciando UniversalProvider...");
-        const p = await UniversalProvider.init({
+        globalProviderPromise = UniversalProvider.init({
           projectId: PROJECT_ID,
           metadata: {
             name: "Artesanía Viajera",
@@ -48,26 +62,12 @@ export function UbiFlowProvider({ children }: { children: ReactNode }) {
             icons: ["https://avatars.githubusercontent.com/u/37784886"]
           }
         });
+        
+        const p = await globalProviderPromise;
         console.log("UniversalProvider inicializado:", p);
         setProvider(p);
+        checkSession(p);
 
-        // Si ya hay una sesión guardada en memoria
-        if (p.session) {
-          const accounts = p.session.namespaces.eip155?.accounts;
-          if (accounts && accounts.length > 0) {
-            const addr = accounts[0].split(":")[2];
-            setAddress(addr);
-            fetchBalance(addr);
-            
-            const wc = createWalletClient({
-              account: addr as `0x${string}`,
-              chain: celo,
-              transport: custom(p)
-            });
-            setWalletClientB(wc);
-          }
-        }
-        
         p.on("accountsChanged", (accounts: string[]) => {
           if (accounts.length > 0) {
             const addr = accounts[0].split(":")[2];
@@ -88,8 +88,30 @@ export function UbiFlowProvider({ children }: { children: ReactNode }) {
 
       } catch (e) {
         console.error("Error inicializando UniversalProvider en UbiFlowContext", e);
+        isGlobalInitialized = false;
+        globalProviderPromise = null;
       }
     };
+
+    const checkSession = (p: UniversalProvider) => {
+      // Si ya hay una sesión guardada en memoria
+      if (p.session) {
+        const accounts = p.session.namespaces.eip155?.accounts;
+        if (accounts && accounts.length > 0) {
+          const addr = accounts[0].split(":")[2];
+          setAddress(addr);
+          fetchBalance(addr);
+          
+          const wc = createWalletClient({
+            account: addr as `0x${string}`,
+            chain: celo,
+            transport: custom(p)
+          });
+          setWalletClientB(wc);
+        }
+      }
+    };
+
     initProvider();
   }, []);
 
