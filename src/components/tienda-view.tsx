@@ -18,6 +18,8 @@ import { useTheme } from "@/lib/theme-context";
 import { Loader2, CheckCircle, Store, Map } from "lucide-react";
 import { ImageModal } from "./image-modal";
 import { REFI_SPLITTER_CONTRACT } from "@/constants/contracts";
+import { ReFiCheckoutModal } from "./refi-checkout-modal";
+import { WalletBalanceButton } from "@/components/wallet-balance-button";
 
 // 🟢 NUEVO: Configuración de Tokens ERC-20
 const G_DOLLAR_ADDRESS = "0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A";
@@ -131,7 +133,7 @@ const NFT_PRODUCTS = [
   },
 ];
 
-export function TiendaView() {
+export function TiendaView({ onNavigate }: { onNavigate?: (tab: any) => void } = {}) {
   const { user, authenticated: authPrivy, login, getAccessToken } = usePrivy();
   const { sendTransactionAsync } = useSendTransaction();
   const { writeContractAsync } = useWriteContract();
@@ -162,6 +164,9 @@ export function TiendaView() {
     puebloId: string;
     recipient: string;
   } | null>(null);
+
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const {
     isLoading: isConfirmingPayment,
@@ -430,18 +435,53 @@ export function TiendaView() {
 
   return (
     <div className={`flex flex-col gap-6 px-2 pb-24 min-h-screen transition-colors ${isDarkMode ? "bg-gradient-to-b from-[#0F0A1F] to-[#000000] text-zinc-100" : "bg-gradient-to-b from-slate-50 to-slate-200 text-slate-900"}`}>
+      <ReFiCheckoutModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        product={selectedProduct}
+        isMiniPayRoute={isMiniPayRoute}
+        onSuccess={async (productId) => {
+          try {
+             const token = await getAccessToken();
+             const res = await fetch("/api/mint-badge", {
+               method: "POST",
+               headers: {
+                 "Content-Type": "application/json",
+                 Authorization: `Bearer ${token}`,
+               },
+               body: JSON.stringify({
+                 recipient: userAddress,
+                 badgeId: selectedProduct?.badgeId,
+               }),
+             });
+             const data = await res.json();
+             if (res.ok && data.success) {
+               setPaid((prev) => new Set(prev).add(productId));
+             } else {
+               alert("Pago exitoso pero error al mintear la insignia: " + data.error);
+             }
+          } catch(e) {
+             console.error(e);
+             alert("Pago exitoso, pero hubo un error de red al mintear el NFT.");
+          }
+        }}
+      />
+
       <ImageModal
         src={imagenAmpliada}
         onClose={() => setImagenAmpliada(null)}
       />
 
-      <header className="pt-4 text-center">
-        <h2 className={`text-2xl font-black uppercase tracking-widest ${isDarkMode ? "text-white" : "text-primary"}`}>
-          Digital Museum
-        </h2>
-        <p className={`text-[10px] font-medium uppercase tracking-widest mt-1 ${isDarkMode ? "text-zinc-500" : "text-slate-500"}`}>
-          Preserving heritage on Celo Mainnet 🌐
-        </p>
+      <header className="flex justify-between items-center pt-2 px-2">
+        <div className="flex flex-col gap-0.5">
+          <h2 className="text-lg font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 uppercase tracking-widest">
+            Digital Museum
+          </h2>
+          <p className="text-[9px] font-bold uppercase tracking-widest opacity-50">
+            Preserving heritage on Celo Mainnet 🌐
+          </p>
+        </div>
+        {onNavigate && <WalletBalanceButton onOpen={() => onNavigate("dashboard")} />}
       </header>
 
       <div className={`flex gap-2 p-1.5 backdrop-blur-md rounded-2xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white/80 border-primary/20 shadow-sm"}`}>
@@ -508,34 +548,45 @@ export function TiendaView() {
                    </button>
                 ) : (
                   <div className="flex flex-col gap-1">
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => handlePayERC20(nft, USDT_ADDRESS, 6)}
-                        disabled={paying !== null || isConfirmingPayment}
-                        className={`flex-1 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 active:scale-95 ${isDarkMode ? "bg-white text-black hover:bg-zinc-200" : "bg-slate-900 text-white hover:bg-slate-800"}`}
-                      >
-                        {paying === nft.id && paymentState === "approving" ? <Loader2 className="h-3 w-3 animate-spin" /> : paying === nft.id && paymentState === "paying" ? "..." : "USDT"}
-                      </button>
-                      <button
-                        onClick={() => handlePayERC20(nft, G_DOLLAR_ADDRESS, 18)}
-                        disabled={paying !== null || isConfirmingPayment}
-                        className={`flex-1 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 active:scale-95 border ${isDarkMode ? "bg-white/10 text-white border-white/20 hover:bg-white/20" : "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"}`}
-                      >
-                        {paying === nft.id && paymentState === "approving" ? <Loader2 className="h-3 w-3 animate-spin" /> : paying === nft.id && paymentState === "paying" ? "..." : "G$"}
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedProduct(nft);
+                        setIsModalOpen(true);
+                      }}
+                      className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 ${isDarkMode ? "bg-primary text-white hover:bg-primary/90 shadow-primary/20" : "bg-primary text-white hover:bg-primary/90 shadow-primary/30"}`}
+                    >
+                      🌱 Checkout ReFi
+                    </button>
                   </div>
                 )}
                 
-                {/* Opción fallback CELO muy minimalista */}
+                {/* Opciones directas (Fast Checkout) */}
                 {!paid.has(nft.id) && (
-                   <button
-                     onClick={() => handlePayCelo(nft)}
-                     disabled={paying !== null || isConfirmingPayment}
-                     className={`w-full py-1 text-[8px] font-bold uppercase transition-colors ${isDarkMode ? "text-zinc-500 hover:text-white" : "text-slate-400 hover:text-primary"}`}
-                   >
-                     {paying === nft.id || isConfirmingPayment ? "..." : "CELO Nativo"}
-                   </button>
+                  <div className="flex justify-between items-center mt-1 px-2 py-1 bg-black/5 dark:bg-white/5 rounded-lg border border-black/5 dark:border-white/5">
+                    <button
+                      onClick={() => handlePayERC20(nft, G_DOLLAR_ADDRESS, 18)}
+                      disabled={paying !== null || isConfirmingPayment}
+                      className={`text-[8px] font-black uppercase transition-colors flex items-center gap-1 ${isDarkMode ? "text-emerald-400 hover:text-emerald-300" : "text-emerald-600 hover:text-emerald-500"}`}
+                    >
+                      {paying === nft.id ? "..." : "Pagar G$"}
+                    </button>
+                    <div className="w-[1px] h-3 bg-black/10 dark:bg-white/10" />
+                    <button
+                      onClick={() => handlePayERC20(nft, USDT_ADDRESS, 6)}
+                      disabled={paying !== null || isConfirmingPayment}
+                      className={`text-[8px] font-black uppercase transition-colors flex items-center gap-1 ${isDarkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-500"}`}
+                    >
+                      {paying === nft.id ? "..." : "USDT"}
+                    </button>
+                    <div className="w-[1px] h-3 bg-black/10 dark:bg-white/10" />
+                    <button
+                      onClick={() => handlePayCelo(nft)}
+                      disabled={paying !== null || isConfirmingPayment}
+                      className={`text-[8px] font-black uppercase transition-colors flex items-center gap-1 ${isDarkMode ? "text-amber-400 hover:text-amber-300" : "text-amber-600 hover:text-amber-500"}`}
+                    >
+                      {paying === nft.id || isConfirmingPayment ? "..." : "CELO"}
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

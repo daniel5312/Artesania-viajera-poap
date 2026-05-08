@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useAccount, useConnect, useConnectors } from "wagmi";
 import { usePrivy } from "@privy-io/react-auth";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 
 import dynamic from "next/dynamic";
 import { ThemeProvider, useTheme } from "@/lib/theme-context";
@@ -20,8 +20,9 @@ const ComunidadView = dynamic(() => import("@/components/comunidad-view").then(m
 const MomentosView = dynamic(() => import("@/components/momentos-view").then(m => m.MomentosView), { ssr: false });
 const CollectionView = dynamic(() => import("@/components/collection-view").then(m => m.CollectionView), { ssr: false });
 const DashboardWalletView = dynamic(() => import("@/components/dashboard-wallet-view").then(m => m.DashboardWalletView), { ssr: false });
+const ImpactDashboard = dynamic(() => import("@/components/impact-dashboard").then(m => m.ImpactDashboard), { ssr: false });
 
-type Tab = "pasaporte" | "tienda" | "comunidad" | "momentos" | "coleccion" | "dashboard";
+type Tab = "pasaporte" | "tienda" | "comunidad" | "momentos" | "coleccion" | "dashboard" | "impacto";
 
 function AppShell() {
   const [selectedSello, setSelectedSello] = useState<any | null>(null);
@@ -155,6 +156,7 @@ function AppShell() {
                 setSelectedSello(sello);
                 setActiveTab("momentos");
               }}
+              onNavigate={setActiveTab}
             />
           )}
           {activeTab === "momentos" && (
@@ -163,10 +165,11 @@ function AppShell() {
               onNavigate={setActiveTab}
             />
           )}
-          {activeTab === "tienda" && <TiendaView />}
+          {activeTab === "tienda" && <TiendaView onNavigate={setActiveTab} />}
           {activeTab === "coleccion" && <CollectionView />}
           {activeTab === "comunidad" && <ComunidadView />}
           {activeTab === "dashboard" && <DashboardWalletView />}
+          {activeTab === "impacto" && <ImpactDashboard onNavigate={setActiveTab} />}
         </main>
 
         <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />

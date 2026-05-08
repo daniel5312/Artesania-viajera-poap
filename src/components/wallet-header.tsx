@@ -90,7 +90,6 @@ export function WalletHeader() {
               onClick={handleCopy}
               className="flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm transition-colors hover:border-primary/40 hover:text-primary"
             >
-              <Wallet className="h-3.5 w-3.5" />
               <span className="font-mono font-bold">{shortAddress}</span>
               {copied ? (
                 <Check className="h-3 w-3 text-teal-500" />

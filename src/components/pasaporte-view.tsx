@@ -17,6 +17,7 @@ import {
   Stamp,
   QrCode
 } from "lucide-react";
+import { WalletBalanceButton } from "@/components/wallet-balance-button";
 
 const MapaReal = dynamic(() => import("@/components/mapa"), { ssr: false });
 const publicClient = createPublicClient({
@@ -31,8 +32,10 @@ const PUEBLOS_DEMO = [
 
 export function PasaporteView({
   onStampClick,
+  onNavigate,
 }: {
   onStampClick: (sello: any) => void;
+  onNavigate?: (tab: any) => void;
 }) {
   const pathname = usePathname();
   const isMiniPayRoute = pathname?.includes("/minipay");
@@ -220,13 +223,16 @@ export function PasaporteView({
 
   return (
     <div className="flex flex-col gap-6 px-1 relative pb-24">
-      <header className="pt-4 text-center">
-        <h2 className={`text-2xl font-black uppercase tracking-widest ${isDarkMode ? "text-white" : "text-primary"}`}>
-          {lang === "es" ? "Pasaporte Digital" : "Digital Passport"}
-        </h2>
-        <p className={`text-[10px] font-medium uppercase tracking-widest mt-1 opacity-50`}>
-          {lang === "es" ? "Identidad y Sellos de Ruta" : "Identity and Route Stamps"}
-        </p>
+      <header className="flex justify-between items-center pt-2 px-2">
+        <div className="flex flex-col gap-0.5">
+          <h2 className="text-lg font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 uppercase tracking-widest">
+            {lang === "es" ? "Pasaporte Digital" : "Digital Passport"}
+          </h2>
+          <p className="text-[9px] font-bold uppercase tracking-widest opacity-50">
+            {lang === "es" ? "Identidad y Sellos de Ruta" : "Identity and Route Stamps"}
+          </p>
+        </div>
+        {onNavigate && <WalletBalanceButton onOpen={() => onNavigate("dashboard")} />}
       </header>
 
       {/* G$ Identity movido al Dashboard-Wallet */}

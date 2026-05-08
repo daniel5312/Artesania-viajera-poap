@@ -1,10 +1,10 @@
 "use client"
 
-import { Fingerprint, ShoppingBag, Users, Sparkles, Box, Wallet } from "lucide-react"
+import { Fingerprint, ShoppingBag, Users, Sparkles, Box, Wallet, TrendingUp } from "lucide-react"
 import { useTheme } from "@/lib/theme-context"
 import { t } from "@/lib/i18n"
 
-type Tab = "pasaporte" | "tienda" | "comunidad" | "momentos" | "coleccion" | "dashboard"
+type Tab = "pasaporte" | "tienda" | "comunidad" | "momentos" | "coleccion" | "impacto"
 
 interface BottomNavProps {
   activeTab: Tab
@@ -17,7 +17,7 @@ const tabs: { id: Tab; labelKey: string; icon: any }[] = [
   { id: "tienda", labelKey: "nav.tienda", icon: ShoppingBag },
   { id: "momentos", labelKey: "nav.momentos", icon: Sparkles },
   { id: "comunidad", labelKey: "nav.comunidad", icon: Users },
-  { id: "dashboard", labelKey: "Dashboard", icon: Wallet },
+  { id: "impacto", labelKey: "Impacto", icon: TrendingUp },
 ]
 
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
