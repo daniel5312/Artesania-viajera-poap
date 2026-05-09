@@ -20,6 +20,7 @@ import { ImageModal } from "./image-modal";
 import { REFI_SPLITTER_CONTRACT } from "@/constants/contracts";
 import { ReFiCheckoutModal } from "./refi-checkout-modal";
 import { WalletBalanceButton } from "@/components/wallet-balance-button";
+import { ImpactCounter } from "@/components/impact-counter";
 
 // 🟢 NUEVO: Configuración de Tokens ERC-20
 const G_DOLLAR_ADDRESS = "0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A";
@@ -475,6 +476,9 @@ export function TiendaView({ onNavigate }: { onNavigate?: (tab: any) => void } =
         </div>
         {onNavigate && <WalletBalanceButton onOpen={() => onNavigate("dashboard")} />}
       </header>
+
+      {/* ✅ CONTADOR DE IMPACTO EN VIVO */}
+      <ImpactCounter />
 
       <div className={`flex gap-2 p-1.5 backdrop-blur-md rounded-2xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white/80 border-primary/20 shadow-sm"}`}>
         <button

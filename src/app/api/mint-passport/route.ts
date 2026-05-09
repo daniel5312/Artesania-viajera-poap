@@ -10,16 +10,33 @@ const privy = new PrivyClient(
     process.env.PRIVY_APP_SECRET || ""
 );
 
-// 🟢 Diccionario de NFTs para mintear (Asegúrate de actualizar los CIDs genéricos con los reales)
+// ============================================================
+// 🏆 SELLOS OFICIALES — Colección Antioquia (16 Destinos)
+// Para activar: reemplaza QmPENDING_X con el CID real de Pinata
+// y actualiza URI_TO_PUEBLO en pasaporte-view.tsx y comunidad-view.tsx
+// ============================================================
 const SELLOS_IPFS: Record<string, string> = {
-    guatape_socalos: "https://gateway.pinata.cloud/ipfs/bafkreigqcbgkpmhml3zahydb7hq7gb373nhtjbssc4lko6su42l6tzrxf4",
-    sombrillas_guatape: "https://gateway.pinata.cloud/ipfs/bafkreiegxd63qmcetnfhryf3x7uk63ayxnezqpx7nk6zup3532dzzfznu4",
-    jardin_cafe: "https://gateway.pinata.cloud/ipfs/QmPlaceholderJardin", // ⚠️ CAMBIAR POR EL CID REAL
-    envigado_verde: "https://gateway.pinata.cloud/ipfs/QmPlaceholderEnvigado", // ⚠️ CAMBIAR POR EL CID REAL
-    jerico_cuero: "https://gateway.pinata.cloud/ipfs/QmPlaceholderJerico", // ⚠️ CAMBIAR POR EL CID REAL
-    mompox_filigrana: "https://gateway.pinata.cloud/ipfs/QmPlaceholderMompox", // ⚠️ CAMBIAR POR EL CID REAL
-    el_carmen_ceramica: "https://gateway.pinata.cloud/ipfs/QmPlaceholderElCarmen", // ⚠️ CAMBIAR POR EL CID REAL
-    biota_line: "https://gateway.pinata.cloud/ipfs/QmPlaceholderBiota" // ⚠️ CAMBIAR POR EL CID REAL
+  // ✅ ACTIVOS
+  guatape_socalos:            "https://gateway.pinata.cloud/ipfs/bafkreigqcbgkpmhml3zahydb7hq7gb373nhtjbssc4lko6su42l6tzrxf4",
+  sombrillas_guatape:         "https://gateway.pinata.cloud/ipfs/bafkreiegxd63qmcetnfhryf3x7uk63ayxnezqpx7nk6zup3532dzzfznu4",
+  // 🔜 ORIENTE ANTIOQUEÑO
+  el_penol_piedra:            "https://gateway.pinata.cloud/ipfs/QmPENDING_ElPenol",
+  rionegro_colonial:          "https://gateway.pinata.cloud/ipfs/QmPENDING_Rionegro",
+  la_ceja_flores:             "https://gateway.pinata.cloud/ipfs/QmPENDING_LaCeja",
+  carmen_de_viboral_ceramica: "https://gateway.pinata.cloud/ipfs/QmPENDING_CarmenViboral",
+  el_retiro_cuero:            "https://gateway.pinata.cloud/ipfs/QmPENDING_ElRetiro",
+  san_antonio_pereira:        "https://gateway.pinata.cloud/ipfs/QmPENDING_SanAntonioPer",
+  marinilla_patrimonio:       "https://gateway.pinata.cloud/ipfs/QmPENDING_Marinilla",
+  guarne_campesino:           "https://gateway.pinata.cloud/ipfs/QmPENDING_Guarne",
+  santuario_refi:             "https://gateway.pinata.cloud/ipfs/QmPENDING_Santuario",
+  san_vicente_ferrer:         "https://gateway.pinata.cloud/ipfs/QmPENDING_SanVicente",
+  // 🔜 ÁREA METROPOLITANA
+  envigado_arte:              "https://gateway.pinata.cloud/ipfs/QmPENDING_Envigado",
+  medellin_centro:            "https://gateway.pinata.cloud/ipfs/QmPENDING_Medellin",
+  sabaneta_artesanal:         "https://gateway.pinata.cloud/ipfs/QmPENDING_Sabaneta",
+  caldas_tradicion:           "https://gateway.pinata.cloud/ipfs/QmPENDING_Caldas",
+  // 🔜 OCCIDENTE ANTIOQUEÑO
+  santafe_de_antioquia:       "https://gateway.pinata.cloud/ipfs/QmPENDING_SantaFe",
 };
 
 export async function POST(request: Request) {

@@ -30,6 +30,14 @@ const publicClient = createPublicClient({
   transport: http("https://forno.celo.org"),
 });
 
+// Siempre usar el gateway dedicado, nunca el público (lento)
+const IPFS_GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL || "amethyst-junior-muskox-299.mypinata.cloud";
+function ipfsToUrl(cid: string): string {
+  if (!cid) return "";
+  if (cid.startsWith("http")) return cid;
+  return `https://${IPFS_GATEWAY}/ipfs/${cid.replace("ipfs://", "")}`;
+}
+
 const PUEBLOS = [
   { id: "guatape_socalos", nombre: "Zócalos (Guatapé)" },
   { id: "sombrillas_guatape", nombre: "Sombrillas (Guatapé)" },
@@ -89,9 +97,7 @@ export function MomentosView({
     .map((item) => {
       const cid = item.cid;
       if (!cid) return "";
-      return cid.startsWith("http")
-        ? cid
-        : `https://gateway.pinata.cloud/ipfs/${cid.replace("ipfs://", "")}`;
+      return ipfsToUrl(cid);
     })
     .filter((url) => url !== "");
 
@@ -356,12 +362,19 @@ function MomentosFeed() {
   const [filtroActivo, setFiltroActivo] = useState(PUEBLOS[0].id);
   const [imagenAmpliada, setImagenAmpliada] = useState<string | null>(null);
 
+  // Estados del modal de cámara
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [procesando, setProcesando] = useState(false);
+  const [isConfirmed, setIsConfirmed] = useState(false);
+  const [fotosLocales, setFotosLocales] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const leerMuralGlobal = async () => {
     if (!address) return;
     setCargando(true);
     try {
       let todos: any[] = [];
-      const gateway = process.env.NEXT_PUBLIC_GATEWAY_URL || "gateway.pinata.cloud";
 
       const promesas = PUEBLOS_IDS.map(async (id) => {
         try {
@@ -375,11 +388,7 @@ function MomentosFeed() {
           if (mural) {
             const misFotos = mural.filter((m: any) => m.autor.toLowerCase() === address.toLowerCase());
             return misFotos.map((m: any) => ({
-              url: m.cid.startsWith("ipfs://")
-                ? m.cid.replace("ipfs://", `https://${gateway}/ipfs/`)
-                : m.cid.startsWith("http")
-                  ? m.cid
-                  : `https://${gateway}/ipfs/${m.cid}`,
+              url: ipfsToUrl(m.cid),
               pueblo: id,
               autor: m.autor,
               fecha: Number(m.fecha),
@@ -406,6 +415,41 @@ function MomentosFeed() {
   }, [address]);
 
   const fotosFiltradas = momentosGlobales.filter((m) => m.pueblo === filtroActivo);
+  const todasEnPueblo = [...fotosLocales.map(url => ({ url, pueblo: filtroActivo })), ...fotosFiltradas];
+
+  const handleGuardarMomento = async () => {
+    if (!address) return alert("Billetera no conectada.");
+    if (!fotoPreview) return alert("Selecciona una foto.");
+    setProcesando(true);
+    try {
+      const imageFile = await fetch(fotoPreview).then(r => r.blob()).then(b => new File([b], "momento.jpg", { type: "image/jpeg" }));
+      const { default: imageCompression } = await import("browser-image-compression");
+      const compressed = await imageCompression(imageFile, { maxSizeMB: 0.8, maxWidthOrHeight: 1200 });
+      const formData = new FormData();
+      formData.append("file", compressed);
+      const resUpload = await fetch("/api/upload-moment", { method: "POST", body: formData });
+      const dataUpload = await resUpload.json();
+      if (!dataUpload.success) throw new Error(dataUpload.error);
+      const resRegister = await fetch("/api/register-moment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipient: address, puebloId: filtroActivo, cid: dataUpload.ipfsUrl }),
+      });
+      const dataRegister = await resRegister.json();
+      if (!dataRegister.success) throw new Error(dataRegister.error);
+      setIsConfirmed(true);
+    } catch (e: any) {
+      alert(e.message || "Error técnico");
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const handleCerrarModal = () => {
+    if (isConfirmed && fotoPreview) setFotosLocales(prev => [fotoPreview, ...prev]);
+    setIsModalOpen(false);
+    setTimeout(() => { setFotoPreview(null); setIsConfirmed(false); setProcesando(false); }, 500);
+  };
 
   return (
     <div className="flex flex-col gap-5 px-4 pb-24 relative">
@@ -437,35 +481,106 @@ function MomentosFeed() {
         ))}
       </div>
 
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => setFotoPreview(ev.target?.result as string);
+            reader.readAsDataURL(file);
+          }
+        }}
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+      />
+
       <div className="grid grid-cols-3 gap-2">
+        {/* Botón cámara siempre visible como primer elemento */}
+        <button
+          onClick={() => { setIsConfirmed(false); setFotoPreview(null); setIsModalOpen(true); }}
+          className="aspect-square flex flex-col items-center justify-center bg-primary/10 rounded-2xl border-2 border-dashed border-primary/40 active:scale-95 transition-all"
+        >
+          <Camera className="text-primary mb-1" size={24} />
+          <span className="text-[8px] font-black uppercase text-primary">Subir Foto</span>
+        </button>
+
         {cargando ? (
-          <div className="col-span-3 flex justify-center py-20">
-            <Loader2 className="animate-spin text-primary" size={40} />
+          <div className="col-span-2 flex justify-center items-center py-4">
+            <Loader2 className="animate-spin text-primary" size={28} />
           </div>
-        ) : fotosFiltradas.length === 0 ? (
-          <div className="col-span-3 text-center p-12 border-2 border-dashed border-primary/10 rounded-2xl bg-primary/5">
-            <MapPin className="mx-auto mb-3 text-primary/30" size={32} />
-            <p className="text-[10px] font-bold text-muted-foreground uppercase">
-              Aún no tienes fotos aquí
-            </p>
+        ) : todasEnPueblo.length === 0 ? (
+          <div className="col-span-2 flex flex-col items-center justify-center py-4 text-center">
+            <MapPin className="text-primary/30 mb-1" size={22} />
+            <p className="text-[9px] font-bold text-muted-foreground uppercase">Aún no tienes fotos aquí</p>
           </div>
         ) : (
-          fotosFiltradas.map((m, i) => (
+          todasEnPueblo.map((m, i) => (
             <div
               key={i}
               onClick={() => setImagenAmpliada(m.url)}
               className="relative aspect-square rounded-2xl overflow-hidden bg-card border border-primary/10 active:scale-95 transition-all cursor-pointer shadow-sm"
             >
-              <img
-                src={m.url}
-                className="w-full h-full object-cover"
-                alt="Mi Momento"
-              />
+              <img src={m.url} className="w-full h-full object-cover" alt="Mi Momento" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-80" />
             </div>
           ))
         )}
       </div>
+
+      {/* Modal de cámara */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-md px-4 py-6">
+          <div className="w-full max-w-sm bg-card/90 rounded-[2.5rem] shadow-2xl border border-primary/20 flex flex-col max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-5 sticky top-0 bg-card/80 backdrop-blur-md z-10">
+              <h3 className="font-black text-primary text-sm uppercase">Nuevo Momento — {PUEBLOS.find(p => p.id === filtroActivo)?.nombre}</h3>
+              {!procesando && <button onClick={handleCerrarModal} className="p-2 bg-primary/10 rounded-full text-primary"><X size={18} /></button>}
+            </div>
+            <div className="p-5 flex flex-col gap-4">
+              <div
+                onClick={() => !procesando && !isConfirmed && fileInputRef.current?.click()}
+                className={`relative aspect-square w-full rounded-3xl overflow-hidden flex items-center justify-center ${!fotoPreview ? "bg-primary/5 border-2 border-dashed border-primary/30" : ""}`}
+              >
+                {fotoPreview ? (
+                  <img src={fotoPreview} className="w-full h-full object-cover" alt="Preview" />
+                ) : (
+                  <div className="text-primary/50 flex flex-col items-center">
+                    <Camera size={48} />
+                    <span className="text-[10px] font-black uppercase mt-2">Toca para la cámara</span>
+                  </div>
+                )}
+                {procesando && (
+                  <div className="absolute inset-0 bg-background/60 flex flex-col items-center justify-center">
+                    <Loader2 className="animate-spin text-primary mb-2" size={32} />
+                    <span className="text-xs font-bold text-primary">Subiendo a la Blockchain...</span>
+                  </div>
+                )}
+              </div>
+              {!isConfirmed ? (
+                <button
+                  onClick={handleGuardarMomento}
+                  disabled={!fotoPreview || procesando}
+                  className="w-full bg-primary text-white py-4 rounded-2xl font-black text-xs uppercase shadow-xl flex justify-center gap-2 items-center disabled:opacity-50"
+                >
+                  {procesando ? <Loader2 className="animate-spin" size={18} /> : "Guardar Momento"}
+                </button>
+              ) : (
+                <div className="flex flex-col gap-3 animate-in slide-in-from-bottom-4">
+                  <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-2xl text-center flex items-center justify-center gap-2">
+                    <CheckCircle2 size={18} className="text-green-500" />
+                    <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">¡Momento Inmortalizado!</p>
+                  </div>
+                  <button onClick={handleCerrarModal} className="w-full bg-card border border-primary/20 text-primary py-4 rounded-2xl font-black text-xs uppercase">
+                    Cerrar y ver Álbum
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div
         className={`rounded-3xl p-5 text-center mt-4 ${
@@ -477,9 +592,7 @@ function MomentosFeed() {
         <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/15">
           <ShoppingBag className="h-5 w-5 text-primary" />
         </div>
-        <h3 className="text-sm font-bold text-foreground">
-          Apoya a más artesanos
-        </h3>
+        <h3 className="text-sm font-bold text-foreground">Apoya a más artesanos</h3>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
           Cada sello que coleccionas es una historia que ayudas a preservar.
         </p>

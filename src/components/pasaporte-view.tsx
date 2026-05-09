@@ -30,15 +30,30 @@ const PUEBLOS_DEMO = [
   { id: "sombrillas_guatape", name: "Sombrillas" },
 ];
 
+// 📍 Traduce el hash del tokenURI al puebloId — sincronizado con comunidad-view.tsx
+// Cuando el JSON de Pinata incluya "puebloId" en la raíz, este diccionario se volverá innecesario.
 const URI_TO_PUEBLO: Record<string, string> = {
+  // ✅ ACTIVOS
   "bafkreigqcbgkpmhml3zahydb7hq7gb373nhtjbssc4lko6su42l6tzrxf4": "guatape_socalos",
   "bafkreiegxd63qmcetnfhryf3x7uk63ayxnezqpx7nk6zup3532dzzfznu4": "sombrillas_guatape",
-  "QmPlaceholderJardin": "jardin_cafe",
-  "QmPlaceholderEnvigado": "envigado_verde",
-  "QmPlaceholderJerico": "jerico_cuero",
-  "QmPlaceholderMompox": "mompox_filigrana",
-  "QmPlaceholderElCarmen": "el_carmen_ceramica",
-  "QmPlaceholderBiota": "biota_line",
+  // 🔜 ORIENTE ANTIOQUEÑO
+  "QmPENDING_ElPenol":      "el_penol_piedra",
+  "QmPENDING_Rionegro":     "rionegro_colonial",
+  "QmPENDING_LaCeja":       "la_ceja_flores",
+  "QmPENDING_CarmenViboral":"carmen_de_viboral_ceramica",
+  "QmPENDING_ElRetiro":     "el_retiro_cuero",
+  "QmPENDING_SanAntonioPer":"san_antonio_pereira",
+  "QmPENDING_Marinilla":    "marinilla_patrimonio",
+  "QmPENDING_Guarne":       "guarne_campesino",
+  "QmPENDING_Santuario":    "santuario_refi",
+  "QmPENDING_SanVicente":   "san_vicente_ferrer",
+  // 🔜 ÁREA METROPOLITANA
+  "QmPENDING_Envigado":     "envigado_arte",
+  "QmPENDING_Medellin":     "medellin_centro",
+  "QmPENDING_Sabaneta":     "sabaneta_artesanal",
+  "QmPENDING_Caldas":       "caldas_tradicion",
+  // 🔜 OCCIDENTE ANTIOQUEÑO
+  "QmPENDING_SantaFe":      "santafe_de_antioquia",
 };
 
 export function PasaporteView({
@@ -128,7 +143,7 @@ export function PasaporteView({
     if (!authenticated || !walletAddress) return;
     setCargando(true);
     try {
-      const ids = Array.from({ length: 100 }, (_, i) => BigInt(i));
+      const ids = Array.from({ length: 500 }, (_, i) => BigInt(i));
       const owners = await publicClient.multicall({
         contracts: ids.map((id) => ({
           ...PASSPORT_CONTRACT,
