@@ -30,6 +30,17 @@ const PUEBLOS_DEMO = [
   { id: "sombrillas_guatape", name: "Sombrillas" },
 ];
 
+const URI_TO_PUEBLO: Record<string, string> = {
+  "bafkreigqcbgkpmhml3zahydb7hq7gb373nhtjbssc4lko6su42l6tzrxf4": "guatape_socalos",
+  "bafkreiegxd63qmcetnfhryf3x7uk63ayxnezqpx7nk6zup3532dzzfznu4": "sombrillas_guatape",
+  "QmPlaceholderJardin": "jardin_cafe",
+  "QmPlaceholderEnvigado": "envigado_verde",
+  "QmPlaceholderJerico": "jerico_cuero",
+  "QmPlaceholderMompox": "mompox_filigrana",
+  "QmPlaceholderElCarmen": "el_carmen_ceramica",
+  "QmPlaceholderBiota": "biota_line",
+};
+
 export function PasaporteView({
   onStampClick,
   onNavigate,
@@ -159,10 +170,14 @@ export function PasaporteView({
               );
               const metaRes = await fetch(url);
               const meta = await metaRes.json();
+              
+              const ipfsHash = (res.result as string).split("/").pop() || "";
+              const derivedPuebloId = URI_TO_PUEBLO[ipfsHash] || "guatape_socalos";
+
               return {
                 ...meta,
                 id: misIds[i].toString(),
-                puebloId: meta.puebloId || "guatape_socalos",
+                puebloId: meta.puebloId || derivedPuebloId,
                 image: meta.image
                   ?.replace("ipfs://", `https://${gateway}/ipfs/`)
                   .replace(

@@ -16,18 +16,20 @@ const publicClient = createPublicClient({
 const LANZAMIENTO_TIMESTAMP = 1774656000; // 28 Mar 2026
 
 const PUEBLOS = [
-  { id: "todos", nombre: "🌍 Todos" },
   { id: "guatape_socalos", nombre: "Zócalos (Guatapé)" },
   { id: "sombrillas_guatape", nombre: "Sombrillas (Guatapé)" },
   { id: "jardin_cafe", nombre: "Manilla (Jardín)" },
   { id: "envigado_verde", nombre: "Artesanía (Envigado)" },
   { id: "jerico_cuero", nombre: "Carriel (Jericó)" },
+  { id: "mompox_filigrana", nombre: "Filigrana (Mompox)" },
+  { id: "el_carmen_ceramica", nombre: "Cerámica (El Carmen)" },
+  { id: "biota_line", nombre: "Biota Line" }
 ];
 
 const PUEBLOS_IDS = PUEBLOS.filter((p) => p.id !== "todos").map((p) => p.id);
 
 export function ComunidadView({
-  initialPuebloId = "todos",
+  initialPuebloId = "guatape_socalos",
 }: {
   initialPuebloId?: string;
 }) {
@@ -41,38 +43,37 @@ export function ComunidadView({
     setCargando(true);
     try {
       let todos: any[] = [];
-      const gateway =
-        process.env.NEXT_PUBLIC_GATEWAY_URL || "gateway.pinata.cloud";
+      const gateway = process.env.NEXT_PUBLIC_GATEWAY_URL || "gateway.pinata.cloud";
 
-      for (const id of PUEBLOS_IDS) {
+      const promesas = PUEBLOS_IDS.map(async (id) => {
         try {
-          // 🟢 3. Convertir el id a bytes32 antes de llamar al contrato
           const puebloIdBytes = pad(stringToHex(id), { size: 32 });
-
           const mural = (await publicClient.readContract({
             ...REGISTRY_CONTRACT,
             functionName: "obtenerMural",
-            args: [puebloIdBytes], // 🟢 4. Mandamos el ID convertido
+            args: [puebloIdBytes],
           })) as any[];
 
           if (mural) {
-            todos.push(
-              ...mural.map((m) => ({
-                url: m.cid.startsWith("ipfs://")
-                  ? m.cid.replace("ipfs://", `https://${gateway}/ipfs/`)
-                  : m.cid.startsWith("http")
-                    ? m.cid
-                    : `https://${gateway}/ipfs/${m.cid}`,
-                pueblo: id,
-                autor: m.autor,
-                fecha: Number(m.fecha),
-              })),
-            );
+            return mural.map((m) => ({
+              url: m.cid.startsWith("ipfs://")
+                ? m.cid.replace("ipfs://", `https://${gateway}/ipfs/`)
+                : m.cid.startsWith("http")
+                  ? m.cid
+                  : `https://${gateway}/ipfs/${m.cid}`,
+              pueblo: id,
+              autor: m.autor,
+              fecha: Number(m.fecha),
+            }));
           }
         } catch (e) {
           console.error(`Error leyendo ${id}:`, e);
         }
-      }
+        return [];
+      });
+
+      const resultados = await Promise.all(promesas);
+      todos = resultados.flat();
       setMomentosGlobales(todos.sort((a, b) => b.fecha - a.fecha));
     } catch (e) {
       console.error("Error global:", e);
@@ -89,7 +90,7 @@ export function ComunidadView({
     const base = momentosGlobales.filter(
       (m) =>
         m.fecha >= LANZAMIENTO_TIMESTAMP &&
-        (filtroActivo === "todos" || m.pueblo === filtroActivo),
+        m.pueblo === filtroActivo,
     );
     // 🟢 5. QUITÉ EL MAP DE ÚNICOS: Así se ven todas las fotos de todos los usuarios
     return base.slice(0, 12);
@@ -107,9 +108,7 @@ export function ComunidadView({
             <Users size={14} /> Red Phygital
           </span>
           <span className="text-[9px] text-muted-foreground font-bold">
-            {filtroActivo === "todos"
-              ? "Global"
-              : PUEBLOS.find((p) => p.id === filtroActivo)?.nombre}
+            {PUEBLOS.find((p) => p.id === filtroActivo)?.nombre}
           </span>
         </div>
         <div className="bg-primary/10 px-3 py-1 rounded-full">

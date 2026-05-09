@@ -1,6 +1,5 @@
 // Exportamos las direcciones leyendo del environment para mantener la seguridad dinámica
-export const COLLECTIVE_SPLITTER_ADDRESS = process.env.NEXT_PUBLIC_COLLECTIVE_SPLITTER_ADDRESS as `0x${string}`;
-export const TREASURY_SPLITTER_ADDRESS = process.env.NEXT_PUBLIC_TREASURY_SPLITTER_ADDRESS as `0x${string}`;
+export const REFI_SPLITTER_ADDRESS = process.env.NEXT_PUBLIC_REFI_SPLITTER_ADDRESS as `0x${string}`;
 
 export const REFI_SPLITTER_ABI = [
   {

@@ -273,12 +273,7 @@ export function TiendaView({ onNavigate }: { onNavigate?: (tab: any) => void } =
       }
 
       // [REFI] Logic: Cálculos de impacto y enrutamiento dual
-      let targetContractAddress =
-        process.env.NEXT_PUBLIC_TREASURY_SPLITTER_ADDRESS; // Por defecto: Tesorería Biota
-      if (product.puebloId.includes("el_carmen")) {
-        targetContractAddress =
-          process.env.NEXT_PUBLIC_COLLECTIVE_SPLITTER_ADDRESS; // GoodCollective para El Carmen
-      }
+      const targetContractAddress = REFI_SPLITTER_CONTRACT.address;
 
       // [CELO] Transaction: Llamadas a la red.
       const tx = await writeContractAsync({
@@ -344,10 +339,7 @@ export function TiendaView({ onNavigate }: { onNavigate?: (tab: any) => void } =
         console.log("Ya en Celo Mainnet o usuario canceló switch");
       }
 
-      let targetContractAddress = process.env.NEXT_PUBLIC_TREASURY_SPLITTER_ADDRESS;
-      if (product.puebloId.includes("el_carmen")) {
-        targetContractAddress = process.env.NEXT_PUBLIC_COLLECTIVE_SPLITTER_ADDRESS;
-      }
+      const targetContractAddress = REFI_SPLITTER_CONTRACT.address;
 
       const amount = parseUnits(product.price, decimals);
 

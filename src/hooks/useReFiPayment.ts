@@ -82,9 +82,7 @@ export function useReFiPayment() {
         // Probablemente ya está en Celo Mainnet
       }
 
-      const splitterAddress = isCollective 
-        ? process.env.NEXT_PUBLIC_COLLECTIVE_SPLITTER_ADDRESS 
-        : process.env.NEXT_PUBLIC_TREASURY_SPLITTER_ADDRESS;
+      const splitterAddress = REFI_SPLITTER_CONTRACT.address;
 
       if (!splitterAddress) throw new Error("El contrato Splitter no está configurado.");
 
