@@ -4,7 +4,7 @@ import { Fingerprint, ShoppingBag, Users, Sparkles, Box, Wallet, TrendingUp } fr
 import { useTheme } from "@/lib/theme-context"
 import { t } from "@/lib/i18n"
 
-type Tab = "pasaporte" | "tienda" | "comunidad" | "momentos" | "coleccion" | "impacto"
+type Tab = "pasaporte" | "tienda" | "comunidad" | "momentos" | "coleccion" | "dashboard" | "impacto"
 
 interface BottomNavProps {
   activeTab: Tab

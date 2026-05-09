@@ -8,8 +8,8 @@ import {console} from "forge-std/console.sol";
 contract DeployReFiSplitter is BaseScript {
     function run() external broadcast {
         // 1. Tesorería de la Ruta (La DApp, recibe el 5%)
-        // Por defecto usará la wallet con la que despliegas
-        address treasuryPool = broadcaster; 
+        // Dirección fija de tesorería Artesanía Viajera
+        address treasuryPool = 0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b;
 
         // 2. GoodPools Iniciales (El otro 5% se divide entre estos 2 pools, es decir 2.5% cada uno)
         address[] memory initialPools = new address[](2);
