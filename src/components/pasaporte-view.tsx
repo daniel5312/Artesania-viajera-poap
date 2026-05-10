@@ -215,14 +215,14 @@ export function PasaporteView({
     }
   }, [authenticated, userAddress]);
 
-  const handleSimularMint = async (puebloId: string) => {
+  const [puebloActivo, setPuebloActivo] = useState("Guatapé");
+
+  const handleSimularMint = async (puebloId: string, puebloName: string) => {
     if (!authenticated) {
       if (!isMiniPayRoute) return login();
-      else {
-        alert("MiniPay no conectado. Refresca la página.");
-        return;
-      }
+      else { alert("MiniPay no conectado."); return; }
     }
+    setPuebloActivo(puebloName); // Mueve el mapa al pueblo seleccionado
     setSimulando(puebloId);
     try {
       const res = await fetch("/api/mint-passport", {
@@ -231,14 +231,10 @@ export function PasaporteView({
         body: JSON.stringify({ recipient: userAddress, puebloId }),
       });
       if (res.ok) {
-        alert("¡Sello estampado por el Robot! 🤖");
+        alert(`¡Sello de ${puebloName} estampado! 🤖`);
         leerPasaporte();
       }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSimulando(null);
-    }
+    } catch (e) { console.error(e); } finally { setSimulando(null); }
   };
 
   useEffect(() => {
@@ -255,34 +251,37 @@ export function PasaporteView({
     <div className="flex flex-col gap-6 px-1 relative pb-24">
       <header className="flex justify-between items-center pt-2 px-2">
         <div className="flex flex-col gap-0.5">
-          <h2 className="text-lg font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 uppercase tracking-widest">
-            {lang === "es" ? "Pasaporte Digital" : "Digital Passport"}
-          </h2>
-          <p className="text-[9px] font-bold uppercase tracking-widest opacity-50">
-            {lang === "es" ? "Identidad y Sellos de Ruta" : "Identity and Route Stamps"}
-          </p>
+          <span className={`text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-1.5 ${isDarkMode ? "text-[#7a7a78]" : "text-[#6b6862]"}`}>
+            <Fingerprint size={11} /> Digital Passport · Identity
+          </span>
         </div>
         {onNavigate && <WalletBalanceButton onOpen={() => onNavigate("dashboard")} />}
       </header>
 
-      {/* G$ Identity movido al Dashboard-Wallet */}
-
-      <div className="h-60 w-full overflow-hidden rounded-[3rem] border-4 border-card shadow-2xl z-0">
-        <MapaReal />
+      <div className="h-64 w-full overflow-hidden rounded-[2.5rem] border-4 border-[#faf9f7] dark:border-[#0d0d0d] shadow-2xl z-0">
+        <MapaReal selectedTown={puebloActivo} />
       </div>
 
       {/* Simulación de Sellos Principales */}
-      <div className="bg-primary/5 border border-dashed border-primary/20 rounded-[2.5rem] p-4 flex flex-col gap-3">
-        <p className="text-[9px] font-black uppercase text-center text-primary flex items-center justify-center gap-2 opacity-60">
-          <QrCode size={12} /> {lang === "es" ? "Escanear Sello Principal" : "Scan Primary Stamp"}
+      <div className={`p-4 rounded-[2.5rem] border border-dashed ${isDarkMode ? "bg-white/5 border-white/10" : "bg-[#faf9f7] border-[#dcd8d1]"}`}>
+        <p className={`text-[9px] font-black uppercase text-center mb-3 opacity-60 flex items-center justify-center gap-2 ${isDarkMode ? "text-[#7a7a78]" : "text-[#6b6862]"}`}>
+          <QrCode size={12} /> {lang === "es" ? "Simular Ubicación" : "Simulate Location"}
         </p>
         <div className="flex flex-wrap gap-2 justify-center">
-          {PUEBLOS_DEMO.map((p) => (
+          {([
+            { id: "guatape_socalos", name: "Guatapé" },
+            { id: "jardin_cafe", name: "Jardín" },
+            { id: "santafe_de_antioquia", name: "Santa Fe" },
+          ]).map((p) => (
             <button
               key={p.id}
-              onClick={() => handleSimularMint(p.id)}
+              onClick={() => handleSimularMint(p.id, p.name)}
               disabled={simulando !== null}
-              className={`text-[8px] px-4 py-2 rounded-full font-bold transition-all ${isDarkMode ? "bg-white/5 border border-white/10" : "bg-white border border-primary/20"}`}
+              className={`text-[9px] px-5 py-2.5 rounded-full font-black uppercase tracking-widest transition-all active:scale-95 ${
+                puebloActivo === p.name 
+                  ? isDarkMode ? "bg-[#5FF5B4] text-[#050505]" : "bg-[#0d0d0c] text-[#f2efeb]"
+                  : isDarkMode ? "bg-white/5 text-[#7a7a78]" : "bg-white text-[#6b6862] border border-[#dcd8d1]"
+              }`}
             >
               {simulando === p.id ? "..." : p.name}
             </button>

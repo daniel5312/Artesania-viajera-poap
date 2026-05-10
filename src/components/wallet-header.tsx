@@ -1,31 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Wallet,
-  Copy,
-  Check,
-  Sun,
-  Moon,
-  Languages,
-  LogOut,
-} from "lucide-react";
+import { Wallet, Copy, Check, Sun, Moon, Languages, LogOut } from "lucide-react";
 import { useTheme } from "@/lib/theme-context";
-import { t } from "@/lib/i18n";
 import { usePrivy } from "@privy-io/react-auth";
 import { useAccount, useDisconnect } from "wagmi";
 import { usePathname } from "next/navigation";
+import { useGlobal } from "@/lib/global-context";
 
 export function WalletHeader() {
   const [copied, setCopied] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   const { isDarkMode, toggleTheme, lang, toggleLang } = useTheme();
+  const { gDollarFormatted, gDollarBalance } = useGlobal();
   const pathname = usePathname();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
 
   const isMiniPayRoute = pathname?.includes("/minipay");
 
@@ -35,12 +26,9 @@ export function WalletHeader() {
 
   if (!mounted) return null;
 
-  const authenticated = isMiniPayRoute ? authWagmi : authPrivy;
-  const walletAddress = isMiniPayRoute ? wagmiAddress : user?.wallet?.address;
-
-  const shortAddress = walletAddress
-    ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
-    : "";
+  const authenticated = authWagmi || authPrivy;
+  const walletAddress = wagmiAddress ?? user?.wallet?.address;
+  const shortAddress = walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : "";
 
   function handleCopy() {
     if (!walletAddress) return;
@@ -60,9 +48,15 @@ export function WalletHeader() {
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 border border-primary/30 shadow-[0_0_10px_rgba(129,98,243,0.3)]">
           <span className="text-sm font-black text-primary">AV</span>
         </div>
-        <h1 className="text-sm font-black tracking-tight text-foreground">
-          Artesanía Viajera
-        </h1>
+        <div className="flex flex-col leading-none">
+          <h1 className="text-sm font-black tracking-tight text-foreground">Artesanía Viajera</h1>
+          {/* G$ balance — always visible, updates every 10s */}
+          {authenticated && (
+            <span className={`text-[10px] font-black tabular-nums transition-all ${gDollarBalance > 0n ? "text-emerald-500" : "text-zinc-400"}`}>
+              G$ {gDollarFormatted}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-1.5">
@@ -77,11 +71,7 @@ export function WalletHeader() {
           onClick={toggleTheme}
           className="flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-card/60 text-muted-foreground backdrop-blur-sm transition-colors hover:border-primary/40 hover:text-foreground"
         >
-          {isDarkMode ? (
-            <Sun className="h-3.5 w-3.5" />
-          ) : (
-            <Moon className="h-3.5 w-3.5" />
-          )}
+          {isDarkMode ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
         </button>
 
         {authenticated && (
@@ -91,11 +81,7 @@ export function WalletHeader() {
               className="flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm transition-colors hover:border-primary/40 hover:text-primary"
             >
               <span className="font-mono font-bold">{shortAddress}</span>
-              {copied ? (
-                <Check className="h-3 w-3 text-teal-500" />
-              ) : (
-                <Copy className="h-3 w-3" />
-              )}
+              {copied ? <Check className="h-3 w-3 text-teal-500" /> : <Copy className="h-3 w-3" />}
             </button>
             <button
               onClick={handleLogout}

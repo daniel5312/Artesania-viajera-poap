@@ -51,19 +51,12 @@ export function CollectionView() {
 
   return (
     <div className="flex flex-col gap-6 px-2 pb-24">
-      <header className="pt-4 text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 mb-2">
-            <Box size={12} />
-            <span className="text-[9px] font-black uppercase tracking-widest">Digital Vault</span>
+      <div className="pt-3 flex justify-center">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
+          <Box size={11} />
+          <span className="text-[9px] font-black uppercase tracking-widest">Digital Vault · Celo Mainnet</span>
         </div>
-        <h2 className={`text-2xl font-black uppercase tracking-tight ${isDarkMode ? "text-white" : "text-slate-900"}`}>
-          {lang === "es" ? "Mi Colección" : "My Collection"}
-        </h2>
-        <p className={`text-[10px] font-medium uppercase tracking-widest mt-1 opacity-50`}>
-          {lang === "es" ? "Tus activos digitales en Celo" : "Your digital assets on Celo"}
-        </p>
-      </header>
-
+      </div>
       {myCollection.length === 0 ? (
         <div className={`p-8 rounded-[2.5rem] border border-dashed flex flex-col items-center justify-center text-center gap-4 ${isDarkMode ? "bg-white/5 border-white/10" : "bg-slate-100 border-slate-300"}`}>
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">

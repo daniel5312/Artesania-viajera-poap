@@ -426,8 +426,20 @@ export function TiendaView({ onNavigate }: { onNavigate?: (tab: any) => void } =
 
   const filteredProducts = NFT_PRODUCTS.filter((p) => p.type === category);
 
+  // ── NEAR style tokens (inline for this component)
+  const N = {
+    bg:     isDarkMode ? "bg-[#050505] text-[#e2e2df]" : "bg-[#f2efeb] text-[#0d0d0c]",
+    card:   isDarkMode ? "bg-[#0d0d0d] border-[#1f1f1e]" : "bg-[#faf9f7] border-[#dcd8d1]",
+    inner:  isDarkMode ? "bg-[#121212] border-[#1f1f1e]" : "bg-[#f2efeb] border-[#dcd8d1]",
+    muted:  isDarkMode ? "text-[#7a7a78]" : "text-[#6b6862]",
+    txt:    isDarkMode ? "text-[#e2e2df]" : "text-[#0d0d0c]",
+    mint:   "text-[#5FF5B4]",
+    cta:    isDarkMode ? "bg-[#5FF5B4] text-[#050505]" : "bg-[#0d0d0c] text-[#f2efeb]",
+    ghost:  isDarkMode ? "border-[#1f1f1e] text-[#7a7a78]" : "border-[#dcd8d1] text-[#6b6862]",
+  };
+
   return (
-    <div className={`flex flex-col gap-6 px-2 pb-24 min-h-screen transition-colors ${isDarkMode ? "bg-gradient-to-b from-[#0F0A1F] to-[#000000] text-zinc-100" : "bg-gradient-to-b from-slate-50 to-slate-200 text-slate-900"}`}>
+    <div className={`flex flex-col gap-4 px-3 pb-24 min-h-screen transition-colors ${N.bg}`}>
       <ReFiCheckoutModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -438,180 +450,119 @@ export function TiendaView({ onNavigate }: { onNavigate?: (tab: any) => void } =
              const token = await getAccessToken();
              const res = await fetch("/api/mint-badge", {
                method: "POST",
-               headers: {
-                 "Content-Type": "application/json",
-                 Authorization: `Bearer ${token}`,
-               },
-               body: JSON.stringify({
-                 recipient: userAddress,
-                 badgeId: selectedProduct?.badgeId,
-               }),
+               headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+               body: JSON.stringify({ recipient: userAddress, badgeId: selectedProduct?.badgeId }),
              });
              const data = await res.json();
-             if (res.ok && data.success) {
-               setPaid((prev) => new Set(prev).add(productId));
-             } else {
-               alert("Pago exitoso pero error al mintear la insignia: " + data.error);
-             }
-          } catch(e) {
-             console.error(e);
-             alert("Pago exitoso, pero hubo un error de red al mintear el NFT.");
-          }
+             if (res.ok && data.success) setPaid((prev) => new Set(prev).add(productId));
+             else alert("Pago exitoso pero error al mintear: " + data.error);
+          } catch(e) { console.error(e); alert("Pago exitoso, error de red al mintear."); }
         }}
       />
+      <ImageModal src={imagenAmpliada} onClose={() => setImagenAmpliada(null)} />
 
-      <ImageModal
-        src={imagenAmpliada}
-        onClose={() => setImagenAmpliada(null)}
-      />
-
-      <header className="flex justify-between items-center pt-2 px-2">
+      {/* Header */}
+      <header className="flex justify-between items-center pt-3 px-1">
         <div className="flex flex-col gap-0.5">
-          <h2 className="text-lg font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 uppercase tracking-widest">
-            Digital Museum
-          </h2>
-          <p className="text-[9px] font-bold uppercase tracking-widest opacity-50">
-            Preserving heritage on Celo Mainnet 🌐
-          </p>
+          <span className={`text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-1.5 ${N.muted}`}>
+            <Store size={11} /> Digital Museum · Celo Mainnet
+          </span>
         </div>
         {onNavigate && <WalletBalanceButton onOpen={() => onNavigate("dashboard")} />}
       </header>
 
-      {/* ✅ CONTADOR DE IMPACTO EN VIVO */}
       <ImpactCounter />
 
-      <div className={`flex gap-2 p-1.5 backdrop-blur-md rounded-2xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white/80 border-primary/20 shadow-sm"}`}>
-        <button
-          onClick={() => setCategory("artesanias")}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${category === "artesanias" ? "bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)]" : "text-zinc-500 hover:bg-white/10"}`}
-        >
-          <Store size={14} /> Artesanías
-        </button>
-        <button
-          onClick={() => setCategory("sellos")}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${category === "sellos" ? "bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)]" : "text-zinc-500 hover:bg-white/10"}`}
-        >
-          <Map size={14} /> Sellos Digitales
-        </button>
+      {/* Tab switcher */}
+      <div className={`flex gap-1.5 p-1 rounded-2xl border ${N.card}`}>
+        {(["artesanias", "sellos"] as const).map((cat) => (
+          <button key={cat} onClick={() => setCategory(cat)}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+              category === cat
+                ? isDarkMode ? "bg-[#5FF5B4] text-[#080808]" : "bg-[#0a0a08] text-[#f7f7f5]"
+                : N.muted
+            }`}>
+            {cat === "artesanias" ? <><Store size={12} /> Artesanías</> : <><Map size={12} /> Sellos</>}
+          </button>
+        ))}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
+      {/* Product grid */}
+      <div className="grid grid-cols-2 gap-3">
         {filteredProducts.map((nft) => (
-          <div
-            key={nft.id}
-            className={`relative flex flex-col rounded-3xl overflow-hidden border transition-all group ${isDarkMode ? "border-white/5 bg-[#0a0a0a] shadow-[0_15px_40px_rgba(0,0,0,0.6)] hover:shadow-[0_20px_50px_rgba(129,98,243,0.15)]" : "border-primary/10 bg-white shadow-[0_10px_30px_rgba(0,0,0,0.05)] hover:shadow-xl hover:shadow-primary/10"}`}
-          >
-            {/* Etiqueta Dorada Digital Twin */}
-            <div className={`absolute top-2 left-2 z-10 px-2 py-1 backdrop-blur-md rounded-full border ${isDarkMode ? "bg-black/60 border-amber-500/30" : "bg-white/80 border-amber-400"}`}>
-              <span className={`text-[8px] font-black uppercase tracking-widest flex items-center gap-1 ${isDarkMode ? "text-amber-500" : "text-amber-600"}`}>
-                ✨ Digital Twin Included
-              </span>
+          <div key={nft.id}
+            className={`relative flex flex-col rounded-2xl overflow-hidden border transition-all group hover:opacity-95 active:scale-[0.98] ${N.card}`}>
+
+            {/* Digital Twin badge */}
+            <div className={`absolute top-2 left-2 z-10 px-2 py-0.5 rounded-full border backdrop-blur-md ${isDarkMode ? "bg-black/60 border-[#242422]" : "bg-white/90 border-[#e2e1de]"}`}>
+              <span className={`text-[7px] font-black uppercase tracking-widest ${N.mint}`}>Digital Twin</span>
             </div>
 
-            <div
-              className="relative aspect-square w-full cursor-pointer overflow-hidden"
-              onClick={() => setImagenAmpliada(nft.img)}
-            >
-              <img
-                src={nft.img}
-                alt={nft.name}
-                className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${paid.has(nft.id) ? "grayscale-0" : "grayscale-[0.3]"}`}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent opacity-80" />
-              
+            <div className="relative aspect-square w-full cursor-pointer overflow-hidden"
+              onClick={() => setImagenAmpliada(nft.img)}>
+              <img src={nft.img} alt={nft.name}
+                className="w-full h-full object-cover transition-all duration-700 group-hover:scale-105" />
+              <div className={`absolute inset-0 bg-gradient-to-t ${isDarkMode ? "from-[#111110]" : "from-white"} via-transparent to-transparent opacity-70`} />
               {paid.has(nft.id) && (
-                <div className="absolute inset-0 bg-emerald-500/10 flex items-center justify-center backdrop-blur-sm">
-                  <CheckCircle className="text-emerald-400 h-10 w-10 drop-shadow-[0_0_15px_rgba(52,211,127,0.5)] animate-in zoom-in" />
+                <div className="absolute inset-0 bg-[#5FF5B4]/10 flex items-center justify-center">
+                  <CheckCircle className="text-[#5FF5B4] h-10 w-10" />
                 </div>
               )}
             </div>
-            
-            <div className={`p-3 flex flex-col gap-2 relative z-20 -mt-6 rounded-t-3xl ${isDarkMode ? "bg-[#0a0a0a]" : "bg-white"}`}>
-              <div className="flex flex-col justify-center items-center">
-                <span className={`text-[11px] font-black uppercase tracking-tight text-center ${isDarkMode ? "text-white" : "text-slate-900"}`}>
-                  {nft.name}
-                </span>
-                <span className={`text-[10px] font-mono font-bold mt-0.5 ${isDarkMode ? "text-primary/80" : "text-primary"}`}>
-                  {nft.price} CELO
-                </span>
+
+            <div className="p-3 flex flex-col gap-2">
+              <div className="flex flex-col">
+                <span className={`text-[11px] font-black uppercase tracking-tight ${N.txt}`}>{nft.name}</span>
+                <span className={`text-[10px] font-mono tabular-nums ${N.mint}`}>{nft.price} CELO</span>
               </div>
 
-              {/* Botones de pago estilo museo (USDT/G$ prominentes) */}
-              <div className="mt-1 flex flex-col gap-1 w-full">
-                {paid.has(nft.id) ? (
-                   <button disabled className="w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                     <CheckCircle size={12}/> Owned
-                   </button>
-                ) : (
-                  <div className="flex flex-col gap-1">
-                    <button
-                      onClick={() => {
-                        setSelectedProduct(nft);
-                        setIsModalOpen(true);
-                      }}
-                      className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 ${isDarkMode ? "bg-primary text-white hover:bg-primary/90 shadow-primary/20" : "bg-primary text-white hover:bg-primary/90 shadow-primary/30"}`}
-                    >
-                      🌱 Checkout ReFi
-                    </button>
+              {paid.has(nft.id) ? (
+                <button disabled className={`w-full py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 border ${N.ghost}`}>
+                  <CheckCircle size={11} /> Owned
+                </button>
+              ) : (
+                <>
+                  <button onClick={() => { setSelectedProduct(nft); setIsModalOpen(true); }}
+                    className={`w-full py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 active:scale-95 ${N.cta}`}>
+                    Checkout ReFi
+                  </button>
+
+                  {/* Fast pay row */}
+                  <div className={`flex justify-between items-center px-2 py-1.5 rounded-xl border ${N.inner}`}>
+                    {[
+                      { label: "G$",   fn: () => handlePayERC20(nft, G_DOLLAR_ADDRESS, 18) },
+                      { label: "USDT", fn: () => handlePayERC20(nft, USDT_ADDRESS, 6) },
+                      { label: "CELO", fn: () => handlePayCelo(nft) },
+                    ].map(({ label, fn }, i) => (
+                      <>
+                        {i > 0 && <div key={`sep-${label}`} className={`w-px h-3 ${isDarkMode ? "bg-[#242422]" : "bg-[#e2e1de]"}`} />}
+                        <button key={label} onClick={fn}
+                          disabled={paying !== null || isConfirmingPayment}
+                          className={`text-[8px] font-black uppercase tracking-wider transition-opacity disabled:opacity-40 ${N.muted} hover:${N.mint}`}>
+                          {paying === nft.id ? "…" : label}
+                        </button>
+                      </>
+                    ))}
                   </div>
-                )}
-                
-                {/* Opciones directas (Fast Checkout) */}
-                {!paid.has(nft.id) && (
-                  <div className="flex justify-between items-center mt-1 px-2 py-1 bg-black/5 dark:bg-white/5 rounded-lg border border-black/5 dark:border-white/5">
-                    <button
-                      onClick={() => handlePayERC20(nft, G_DOLLAR_ADDRESS, 18)}
-                      disabled={paying !== null || isConfirmingPayment}
-                      className={`text-[8px] font-black uppercase transition-colors flex items-center gap-1 ${isDarkMode ? "text-emerald-400 hover:text-emerald-300" : "text-emerald-600 hover:text-emerald-500"}`}
-                    >
-                      {paying === nft.id ? "..." : "Pagar G$"}
-                    </button>
-                    <div className="w-[1px] h-3 bg-black/10 dark:bg-white/10" />
-                    <button
-                      onClick={() => handlePayERC20(nft, USDT_ADDRESS, 6)}
-                      disabled={paying !== null || isConfirmingPayment}
-                      className={`text-[8px] font-black uppercase transition-colors flex items-center gap-1 ${isDarkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-500"}`}
-                    >
-                      {paying === nft.id ? "..." : "USDT"}
-                    </button>
-                    <div className="w-[1px] h-3 bg-black/10 dark:bg-white/10" />
-                    <button
-                      onClick={() => handlePayCelo(nft)}
-                      disabled={paying !== null || isConfirmingPayment}
-                      className={`text-[8px] font-black uppercase transition-colors flex items-center gap-1 ${isDarkMode ? "text-amber-400 hover:text-amber-300" : "text-amber-600 hover:text-amber-500"}`}
-                    >
-                      {paying === nft.id || isConfirmingPayment ? "..." : "CELO"}
-                    </button>
-                  </div>
-                )}
-              </div>
+                </>
+              )}
             </div>
           </div>
         ))}
       </div>
 
-      {/* --- REFI BENTO BOX FOOTER --- */}
-      <section className="mt-8 grid grid-cols-2 gap-3 animate-fade-in-up delay-200">
-        <div className={`col-span-2 border rounded-3xl p-5 relative overflow-hidden ${isDarkMode ? "bg-[#111] border-white/5" : "bg-white border-primary/10 shadow-sm"}`}>
-          <div className="absolute -right-10 -top-10 w-32 h-32 bg-primary/20 blur-[50px] rounded-full" />
-          <h3 className="text-xs font-black uppercase tracking-widest text-primary mb-1">Celo Impact</h3>
-          <p className={`text-[10px] leading-relaxed max-w-[80%] ${isDarkMode ? "text-zinc-400" : "text-slate-600"}`}>
-            Fully transparent ledger. Transactions use less energy than a single Google search.
-          </p>
+      {/* Footer info */}
+      <section className={`grid grid-cols-2 gap-2 rounded-2xl border p-4 ${N.card}`}>
+        <div className={`col-span-2 mb-2 text-[9px] font-black uppercase tracking-[0.15em] ${N.muted}`}>Celo Impact</div>
+        <div className={`p-3 rounded-xl border flex flex-col gap-1 ${isDarkMode ? "bg-[#1a1a18] border-[#242422]" : "bg-[#f7f7f5] border-[#e2e1de]"}`}>
+          <span className={`text-[8px] font-bold uppercase ${N.muted}`}>UBI Pools</span>
+          <span className={`text-xs font-black ${N.mint}`}>2%</span>
+          <span className={`text-[8px] ${N.muted}`}>GoodCollective</span>
         </div>
-        
-        <div className={`border rounded-3xl p-4 flex flex-col justify-between ${isDarkMode ? "bg-[#111] border-white/5" : "bg-white border-primary/10 shadow-sm"}`}>
-          <h3 className={`text-[10px] font-black uppercase tracking-widest mb-2 ${isDarkMode ? "text-zinc-500" : "text-slate-400"}`}>UBI Funding</h3>
-          <p className={`text-[11px] font-medium ${isDarkMode ? "text-zinc-300" : "text-slate-700"}`}>
-            2% routed to GoodCollective Pools.
-          </p>
-        </div>
-
-        <div className={`border rounded-3xl p-4 flex flex-col justify-between ${isDarkMode ? "bg-[#111] border-white/5" : "bg-white border-primary/10 shadow-sm"}`}>
-          <h3 className={`text-[10px] font-black uppercase tracking-widest mb-2 ${isDarkMode ? "text-zinc-500" : "text-slate-400"}`}>Fiat Ref</h3>
-          <p className={`text-[11px] font-medium ${isDarkMode ? "text-zinc-300" : "text-slate-700"}`}>
-            1 USDT ≈ 4,000 COP local economy.
-          </p>
+        <div className={`p-3 rounded-xl border flex flex-col gap-1 ${isDarkMode ? "bg-[#1a1a18] border-[#242422]" : "bg-[#f7f7f5] border-[#e2e1de]"}`}>
+          <span className={`text-[8px] font-bold uppercase ${N.muted}`}>Tipo de Cambio</span>
+          <span className={`text-xs font-black ${N.txt}`}>×4,000</span>
+          <span className={`text-[8px] ${N.muted}`}>1 USDT ≈ COP</span>
         </div>
       </section>
     </div>

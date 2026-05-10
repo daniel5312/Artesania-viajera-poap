@@ -1,163 +1,135 @@
 import { useState } from "react";
 import { useTheme } from "@/lib/theme-context";
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar 
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { Users, HeartHandshake, Map, ShieldCheck, TrendingUp, Sparkles } from "lucide-react";
+import { Users, HeartHandshake, Map, ShieldCheck, TrendingUp, Activity } from "lucide-react";
 import { WalletBalanceButton } from "@/components/wallet-balance-button";
 
-// Datos simulados para demostrar tracción a los jueces
 const historicoImpacto = [
-  { mes: "Ene", volumenG: 120, mujeres: 6, tesoreria: 6 },
-  { mes: "Feb", volumenG: 250, mujeres: 12.5, tesoreria: 12.5 },
-  { mes: "Mar", volumenG: 450, mujeres: 22.5, tesoreria: 22.5 },
-  { mes: "Abr", volumenG: 890, mujeres: 44.5, tesoreria: 44.5 },
-  { mes: "May", volumenG: 1240, mujeres: 62, tesoreria: 62 },
+  { mes: "Ene", volumenG: 120,  mujeres: 6,    tesoreria: 6 },
+  { mes: "Feb", volumenG: 250,  mujeres: 12.5, tesoreria: 12.5 },
+  { mes: "Mar", volumenG: 450,  mujeres: 22.5, tesoreria: 22.5 },
+  { mes: "Abr", volumenG: 890,  mujeres: 44.5, tesoreria: 44.5 },
+  { mes: "May", volumenG: 1240, mujeres: 62,   tesoreria: 62 },
 ];
 
 export function ImpactDashboard({ onNavigate }: { onNavigate?: (tab: any) => void } = {}) {
-  const { isDarkMode } = useTheme();
-  const [activeTab, setActiveTab] = useState<"general" | "comunidad">("general");
+  const { isDarkMode: d } = useTheme();
 
-  // Métricas Clave (Dummies realistas para el reporte)
-  const totalGDollars = 2950;
-  const humanPassports = 85;
-  const poolMujeres = totalGDollars * 0.05;
-  const artesanosDirectos = totalGDollars * 0.90;
+  const totalGDollars   = 2950;
+  const humanPassports  = 85;
+  const poolMujeres     = totalGDollars * 0.05;
+  const artesanosShare  = totalGDollars * 0.90;
+
+  // NEAR style tokens
+  const N = {
+    bg:    d ? "bg-[#050505] text-[#e2e2df]" : "bg-[#f2efeb] text-[#0d0d0c]",
+    card:  d ? "bg-[#0d0d0d] border-[#1f1f1e]" : "bg-[#faf9f7] border-[#dcd8d1]",
+    inner: d ? "bg-[#121212] border-[#1f1f1e]" : "bg-[#f2efeb] border-[#dcd8d1]",
+    muted: d ? "text-[#7a7a78]" : "text-[#6b6862]",
+    txt:   d ? "text-[#e2e2df]" : "text-[#0d0d0c]",
+    mint:  "text-[#5FF5B4]",
+    bar:   d ? "#5FF5B4" : "#00a368",
+    grid:  d ? "#1f1f1e" : "#dcd8d1",
+    tick:  d ? "#7a7a78" : "#6b6862",
+    tooltip: d
+      ? { backgroundColor: "#0d0d0d", border: "1px solid #1f1f1e", borderRadius: "12px", fontSize: "11px", fontWeight: "bold", color: "#e2e2df" }
+      : { backgroundColor: "#faf9f7", border: "1px solid #dcd8d1", borderRadius: "12px", fontSize: "11px", fontWeight: "bold", color: "#0d0d0c" },
+  };
+
+  const kpis = [
+    { icon: TrendingUp, label: "Volumen ReFi",    value: `${totalGDollars}`, unit: "G$",   accent: true },
+    { icon: ShieldCheck, label: "Humanos Únicos", value: `${humanPassports}`, unit: "POAPs", accent: false },
+  ];
+
+  const splits = [
+    { icon: HeartHandshake, label: "Artesanos", pct: 90, val: artesanosShare },
+    { icon: Users,          label: "GoodPool Mujeres", pct: 5,  val: poolMujeres },
+    { icon: Map,            label: "Tesorería Ruta",   pct: 5,  val: totalGDollars * 0.05 },
+  ];
 
   return (
-    <div className={`flex flex-col gap-6 px-3 pb-24 min-h-screen transition-colors ${isDarkMode ? "bg-[#0F0A1F] text-zinc-100" : "bg-slate-50 text-slate-900"}`}>
-      
-      {/* Header del Reporte */}
-      <header className="flex justify-between items-center pt-2 px-2 animate-in slide-in-from-top-4 duration-500">
-        <div className="flex flex-col gap-0.5">
-          <h2 className="text-lg font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 uppercase tracking-widest">
-            Impact Report
-          </h2>
-          <p className="text-[9px] font-bold uppercase tracking-widest opacity-50 flex items-center gap-1">
-            <Sparkles size={10} className="text-amber-400" />
-            Transparencia On-Chain
-          </p>
-        </div>
+    <div className={`flex flex-col gap-4 px-3 pb-24 min-h-screen transition-colors ${N.bg}`}>
+
+      {/* Header */}
+      <header className="flex justify-between items-center pt-3 px-1">
+        <span className={`text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-1.5 ${N.muted}`}>
+          <Activity size={11} /> Impact Report · On-Chain
+        </span>
         {onNavigate && <WalletBalanceButton onOpen={() => onNavigate("dashboard")} />}
       </header>
 
-      {/* Tarjetas de Métricas Principales */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className={`p-4 rounded-3xl border relative overflow-hidden group ${isDarkMode ? "bg-[#111] border-white/5" : "bg-white border-primary/20 shadow-sm"}`}>
-          <div className="absolute -right-4 -top-4 w-16 h-16 bg-primary/20 blur-[20px] rounded-full group-hover:bg-primary/40 transition-colors" />
-          <TrendingUp size={16} className={`mb-2 ${isDarkMode ? "text-primary" : "text-primary/80"}`} />
-          <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isDarkMode ? "text-zinc-500" : "text-slate-500"}`}>
-            Volumen ReFi
-          </p>
-          <p className={`text-2xl font-black ${isDarkMode ? "text-white" : "text-slate-900"}`}>
-            {totalGDollars} <span className="text-sm font-bold text-primary">G$</span>
-          </p>
-        </div>
-
-        <div className={`p-4 rounded-3xl border relative overflow-hidden group ${isDarkMode ? "bg-[#111] border-white/5" : "bg-white border-primary/20 shadow-sm"}`}>
-          <div className="absolute -right-4 -top-4 w-16 h-16 bg-emerald-500/20 blur-[20px] rounded-full group-hover:bg-emerald-500/40 transition-colors" />
-          <ShieldCheck size={16} className={`mb-2 ${isDarkMode ? "text-emerald-400" : "text-emerald-600"}`} />
-          <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isDarkMode ? "text-zinc-500" : "text-slate-500"}`}>
-            Humanos Únicos
-          </p>
-          <p className={`text-2xl font-black ${isDarkMode ? "text-white" : "text-slate-900"}`}>
-            {humanPassports} <span className="text-sm font-bold text-emerald-500">POAPs</span>
-          </p>
-        </div>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 gap-2">
+        {kpis.map(({ icon: Icon, label, value, unit, accent }) => (
+          <div key={label} className={`p-4 rounded-2xl border relative overflow-hidden ${N.card}`}>
+            {d && accent && (
+              <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full bg-[#5FF5B4]/8 blur-[30px]" />
+            )}
+            <Icon size={14} className={`mb-2 ${accent ? N.mint : N.muted}`} />
+            <p className={`text-[9px] font-bold uppercase tracking-widest mb-1 ${N.muted}`}>{label}</p>
+            <p className={`text-2xl font-black tabular-nums leading-none ${N.txt}`}>
+              {value}
+              <span className={`text-sm font-bold ml-1 ${accent ? N.mint : N.muted}`}>{unit}</span>
+            </p>
+          </div>
+        ))}
       </div>
 
-      {/* Desglose de Splitters */}
-      <div className={`p-5 rounded-[2rem] border relative overflow-hidden ${isDarkMode ? "bg-black/40 border-white/5" : "bg-white border-primary/10 shadow-lg shadow-primary/5"}`}>
-        <h3 className={`text-[11px] font-black uppercase tracking-widest mb-5 flex items-center gap-2 ${isDarkMode ? "text-zinc-400" : "text-slate-500"}`}>
-          <Map size={14} /> Distribución de Fondos
-        </h3>
-
+      {/* Fund Distribution */}
+      <section className={`p-5 rounded-2xl border ${N.card}`}>
+        <p className={`text-[10px] font-black uppercase tracking-[0.15em] mb-4 flex items-center gap-1.5 ${N.muted}`}>
+          <Map size={12} /> Distribución de Fondos
+        </p>
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
-              <span className={isDarkMode ? "text-zinc-300" : "text-slate-700"}><HeartHandshake size={12} className="inline mr-1 text-emerald-400" /> Artesanos (90%)</span>
-              <span className={isDarkMode ? "text-white" : "text-slate-900"}>{artesanosDirectos} G$</span>
+          {splits.map(({ icon: Icon, label, pct, val }) => (
+            <div key={label} className="flex flex-col gap-1.5">
+              <div className="flex justify-between items-center">
+                <span className={`text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 ${N.muted}`}>
+                  <Icon size={11} /> {label} ({pct}%)
+                </span>
+                <span className={`text-[11px] font-black tabular-nums ${N.txt}`}>{val} G$</span>
+              </div>
+              {/* Progress bar — neutral track, mint fill */}
+              <div className={`h-1.5 rounded-full w-full overflow-hidden ${d ? "bg-[#242422]" : "bg-[#e2e1de]"}`}>
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{ width: `${pct}%`, background: d ? "#5FF5B4" : "#00c27b" }}
+                />
+              </div>
             </div>
-            <div className={`h-2 rounded-full w-full overflow-hidden ${isDarkMode ? "bg-white/10" : "bg-slate-200"}`}>
-              <div className="h-full bg-emerald-400 rounded-full" style={{ width: "90%" }} />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
-              <span className={isDarkMode ? "text-zinc-300" : "text-slate-700"}><Users size={12} className="inline mr-1 text-pink-400" /> GoodPool Mujeres (5%)</span>
-              <span className={isDarkMode ? "text-white" : "text-slate-900"}>{poolMujeres} G$</span>
-            </div>
-            <div className={`h-2 rounded-full w-full overflow-hidden ${isDarkMode ? "bg-white/10" : "bg-slate-200"}`}>
-              <div className="h-full bg-pink-400 rounded-full" style={{ width: "5%" }} />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
-              <span className={isDarkMode ? "text-zinc-300" : "text-slate-700"}><Map size={12} className="inline mr-1 text-amber-400" /> Tesorería Ruta (5%)</span>
-              <span className={isDarkMode ? "text-white" : "text-slate-900"}>{totalGDollars * 0.05} G$</span>
-            </div>
-            <div className={`h-2 rounded-full w-full overflow-hidden ${isDarkMode ? "bg-white/10" : "bg-slate-200"}`}>
-              <div className="h-full bg-amber-400 rounded-full" style={{ width: "5%" }} />
-            </div>
-          </div>
+          ))}
         </div>
-      </div>
+      </section>
 
-      {/* Gráfico de Crecimiento */}
-      <div className={`p-4 rounded-[2rem] border ${isDarkMode ? "bg-[#111] border-white/5" : "bg-white border-primary/10 shadow-sm"}`}>
-        <h3 className={`text-[11px] font-black uppercase tracking-widest mb-6 mt-2 ml-2 ${isDarkMode ? "text-white" : "text-slate-900"}`}>
+      {/* Growth Chart */}
+      <section className={`p-4 rounded-2xl border ${N.card}`}>
+        <p className={`text-[10px] font-black uppercase tracking-[0.15em] mb-5 ml-1 ${N.muted}`}>
           Crecimiento de Aportes
-        </h3>
-        
-        <div className="h-48 w-full -ml-4">
+        </p>
+        <div className="h-44 w-full -ml-3">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={historicoImpacto}>
               <defs>
-                <linearGradient id="colorG" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={isDarkMode ? "#8162f3" : "#4f46e5"} stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor={isDarkMode ? "#8162f3" : "#4f46e5"} stopOpacity={0}/>
+                <linearGradient id="mintGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor={N.bar} stopOpacity={0.25} />
+                  <stop offset="95%" stopColor={N.bar} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? "#333" : "#e2e8f0"} />
-              <XAxis 
-                dataKey="mes" 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fontSize: 10, fill: isDarkMode ? "#a1a1aa" : "#64748b" }} 
-                dy={10}
-              />
-              <YAxis 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fontSize: 10, fill: isDarkMode ? "#a1a1aa" : "#64748b" }}
-                width={40}
-              />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: isDarkMode ? '#18181b' : '#ffffff',
-                  borderRadius: '16px',
-                  border: isDarkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
-                  fontSize: '12px',
-                  fontWeight: 'bold'
-                }}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="volumenG" 
-                name="Volumen (G$)"
-                stroke={isDarkMode ? "#8162f3" : "#4f46e5"} 
-                strokeWidth={3}
-                fillOpacity={1} 
-                fill="url(#colorG)" 
-              />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={N.grid} />
+              <XAxis dataKey="mes" axisLine={false} tickLine={false}
+                tick={{ fontSize: 10, fill: N.tick }} dy={8} />
+              <YAxis axisLine={false} tickLine={false}
+                tick={{ fontSize: 10, fill: N.tick }} width={36} />
+              <Tooltip contentStyle={N.tooltip} />
+              <Area type="monotone" dataKey="volumenG" name="Volumen (G$)"
+                stroke={N.bar} strokeWidth={2}
+                fillOpacity={1} fill="url(#mintGrad)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </div>
-
+      </section>
     </div>
   );
 }

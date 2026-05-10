@@ -1,86 +1,94 @@
 @import 'tailwindcss';
 
+/* ─────────────────────────────────────────────────────────────────
+   NEAR-INSPIRED DESIGN SYSTEM
+   Dark: near-black bg + single mint accent #5FF5B4
+   Light: warm white bg + deep ink accent #0a0a0a
+──────────────────────────────────────────────────────────────────*/
+
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --primary: #8162f3;
-  --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #eb527d;
+  --background:   #f2efeb;          /* Soft parchment white - easy on eyes */
+  --foreground:   #0d0d0c;
+  --card:         #faf9f7;
+  --card-foreground: #0d0d0c;
+  --primary:      #0d0d0c;
+  --primary-foreground: #f2efeb;
+  --accent:       #00a368;          /* Softer mint for light mode */
   --accent-foreground: #ffffff;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #8162f3;
+  --secondary:    #e8e4de;
+  --secondary-foreground: #0d0d0c;
+  --muted:        #dfdbd5;
+  --muted-foreground: #6b6862;
+  --border:       #dcd8d1;
+  --input:        #dcd8d1;
+  --ring:         #00a368;
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #f5f5f5;
-  --card: #141414;
-  --card-foreground: #f5f5f5;
-  --primary: #8162f3;
-  --primary-foreground: #ffffff;
-  --secondary: #1a1a2e;
-  --secondary-foreground: #f5f5f5;
-  --muted: #1a1a1a;
-  --muted-foreground: #a0a0a0;
-  --accent: #eb527d;
-  --accent-foreground: #ffffff;
-  --border: #2a2a2a;
-  --input: #1a1a1a;
-  --ring: #8162f3;
+  --background:   #050505;          /* Deeper night black */
+  --foreground:   #e2e2df;
+  --card:         #0d0d0d;
+  --card-foreground: #e2e2df;
+  --primary:      #5FF5B4;          /* NEAR mint neon */
+  --primary-foreground: #050505;
+  --accent:       #5FF5B4;
+  --accent-foreground: #050505;
+  --secondary:    #121212;
+  --secondary-foreground: #e2e2df;
+  --muted:        #1a1a1a;
+  --muted-foreground: #7a7a78;
+  --border:       #1f1f1e;
+  --input:        #1a1a1a;
+  --ring:         #5FF5B4;
 }
 
-/* 🟢 ESTA ES LA MAGIA QUE QUITA EL ERROR */
-* {
-  border-color: var(--border);
-}
+* { border-color: var(--border); }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
+  font-feature-settings: "rlig" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
 }
 
+/* ─── Glow pulse (mint) ───────────────────────────────────────── */
 @keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(95,245,180,0); }
+  50%       { box-shadow: 0 0 24px 4px rgba(95,245,180,0.18); }
+}
+.animate-pulse-glow { animation: pulse-glow 2.5s ease-in-out infinite; }
 
-  0%,
-  100% {
-    box-shadow: 0 0 8px rgba(129, 98, 243, 0.4), 0 0 20px rgba(129, 98, 243, 0.2);
-  }
-
-  50% {
-    box-shadow: 0 0 16px rgba(129, 98, 243, 0.6), 0 0 40px rgba(129, 98, 243, 0.3);
-  }
+/* ─── Blueprint grid lines (NEAR aesthetic) ───────────────────── */
+.grid-lines {
+  background-image:
+    linear-gradient(to right, var(--border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
+/* ─── Glassmorphism card ──────────────────────────────────────── */
+.glass-card {
+  background: rgba(17, 17, 16, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+:root .glass-card {
+  background: rgba(255,255,255,0.75);
+  border: 1px solid rgba(0,0,0,0.07);
 }
 
-Fix para que el mapa se vea .leaflet-container {
-  width: 100%;
-  height: 50vh;
+/* ─── Leaflet map ─────────────────────────────────────────────── */
+.leaflet-container {
+  width: 100%; height: 50vh;
   border-radius: 1.5rem;
   background: #000 !important;
   z-index: 1;
 }
-
 .leaflet-popup-content-wrapper {
   background: #111 !important;
   color: #fff !important;
-  border: 1px solid #8162f3;
-}
-
-.leaflet-popup-content-wrapper {
+  border: 1px solid #242422;
   overflow: visible !important;
 }
-
-.leaflet-popup-content {
-  width: auto !important;
-  margin: 12px !important;
-}
+.leaflet-popup-content { width: auto !important; margin: 12px !important; }

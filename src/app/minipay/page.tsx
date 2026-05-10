@@ -8,7 +8,7 @@ import { Loader2, X } from "lucide-react";
 
 import dynamic from "next/dynamic";
 import { ThemeProvider, useTheme } from "@/lib/theme-context";
-import { GlobalProvider } from "@/lib/global-context";
+import { useGlobal, GlobalProvider } from "@/lib/global-context";
 import { UbiFlowProvider } from "@/lib/ubi-flow-context";
 import { WalletHeader } from "@/components/wallet-header";
 import { BottomNav } from "@/components/bottom-nav";
@@ -41,11 +41,13 @@ function AppShell() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { isDarkMode } = useTheme();
+  const { userRole } = useGlobal();
 
   const [mounted, setMounted] = useState(false);
   const [showLanding, setShowLanding] = useState(true);
   const [isAutoMinting, setIsAutoMinting] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>("pasaporte");
+  // Artisans land on dashboard; tourists land on pasaporte
+  const [activeTab, setActiveTab] = useState<Tab>(userRole === "artesano" ? "dashboard" : "pasaporte");
 
   const selloPendiente = searchParams.get("sello");
   const isDevMode = searchParams.get("dev") === "true";
@@ -68,12 +70,13 @@ function AppShell() {
   }, [connectors, connect, authWagmi, isMiniPayRoute, isDevMode]);
 
   useEffect(() => {
-    if (isConnected || selloPendiente) {
+    // Show app if connected AND role is chosen, or if there's a pending stamp
+    if ((isConnected && userRole) || selloPendiente) {
       setShowLanding(false);
     } else {
       setShowLanding(true);
     }
-  }, [isConnected, selloPendiente]);
+  }, [isConnected, userRole, selloPendiente]);
 
   useEffect(() => {
     if (isDarkMode) document.documentElement.classList.add("dark");
@@ -119,22 +122,15 @@ function AppShell() {
 
   return (
     <div
-      className={`mx-auto min-h-screen max-w-md relative overflow-hidden transition-colors duration-500 ${isDarkMode ? "bg-[#0F0A1F] text-white" : "bg-[#faf8f5] text-[#2D2D2D]"}`}
+      className={`mx-auto min-h-screen max-w-md relative overflow-hidden transition-colors duration-500 ${isDarkMode ? "bg-[#050505] text-[#e2e2df]" : "bg-[#f2efeb] text-[#0d0d0c]"}`}
     >
       <div className="pointer-events-none fixed inset-0 z-0">
-        <div
-          className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/woven.png')] bg-repeat"
-          style={{ backgroundSize: "400px" }}
-        />
-        <div
-          className={`animate-orb-1 absolute -left-32 top-20 h-96 w-96 rounded-full blur-[80px] transition-colors duration-1000 ${isDarkMode ? "bg-purple-600/20" : "bg-[#4505A4]/10"}`}
-        />
-        <div
-          className={`animate-orb-2 absolute -right-32 top-1/3 h-80 w-80 rounded-full blur-[80px] transition-colors duration-1000 ${isDarkMode ? "bg-blue-600/20" : "bg-[#E9D5FF]/40"}`}
-        />
-        <div
-          className={`animate-orb-3 absolute bottom-20 left-1/4 h-72 w-72 rounded-full blur-[80px] transition-colors duration-1000 ${isDarkMode ? "bg-emerald-600/10" : "bg-[#35D07F]/10"}`}
-        />
+        {/* Subtle noise */}
+        <div className="absolute inset-0 opacity-[0.02] bg-[url('https://www.transparenttextures.com/patterns/noise.png')]" style={{ backgroundSize: "180px" }} />
+        {/* NEAR-style mint radial glow — top right */}
+        <div className={`absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full blur-[140px] transition-opacity duration-1000 ${isDarkMode ? "bg-[#5FF5B4]/10 opacity-100" : "bg-[#00c27b]/8 opacity-60"}`} />
+        {/* Soft glow bottom left */}
+        <div className={`absolute -bottom-32 -left-32 w-[400px] h-[400px] rounded-full blur-[120px] ${isDarkMode ? "bg-[#5FF5B4]/5" : "bg-[#00c27b]/5"}`} />
       </div>
 
       <div className="relative z-10 flex flex-col min-h-screen">
@@ -168,7 +164,7 @@ function AppShell() {
           {activeTab === "tienda" && <TiendaView onNavigate={setActiveTab} />}
           {activeTab === "coleccion" && <CollectionView />}
           {activeTab === "comunidad" && <ComunidadView />}
-          {activeTab === "dashboard" && <DashboardWalletView />}
+          {activeTab === "dashboard" && <DashboardWalletView onNavigate={setActiveTab} />}
           {activeTab === "impacto" && <ImpactDashboard onNavigate={setActiveTab} />}
         </main>
 

@@ -1,319 +1,312 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAccount, useBalance } from "wagmi";
+import { useAccount } from "wagmi";
 import { usePrivy } from "@privy-io/react-auth";
-import { usePathname } from "next/navigation";
 import { formatEther, formatUnits } from "viem";
-import { Loader2, Coins, Droplets, Fingerprint, Wallet, ShieldCheck, UserCheck, PowerOff } from "lucide-react";
+import {
+  Loader2, Coins, Droplets, Fingerprint, ShieldCheck,
+  PowerOff, Stamp, ShoppingBag, TrendingUp, Wallet,
+  Users, Activity, ArrowUpRight,
+} from "lucide-react";
 import { useTheme } from "@/lib/theme-context";
+import { useGlobal } from "@/lib/global-context";
 import { useUBIClaim } from "@/hooks/useUBIClaim";
 import { useSuperfluidStream } from "@/hooks/useSuperfluidStream";
 import { useUbiFlowContext } from "@/lib/ubi-flow-context";
+import { REFI_SPLITTER_CONTRACT } from "@/constants/contracts";
+import { createPublicClient, http } from "viem";
+import { celo } from "viem/chains";
 
 const G_DOLLAR_ADDRESS = "0x62B8B11039fcfE5aB0C56E502b1C372A3d2a9C7A";
-const CUSD_ADDRESS = "0x765DE816845861e75A25fCA122bb6898B8B1282a";
-const CEUR_ADDRESS = "0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73";
+const CUSD_ADDRESS     = "0x765DE816845861e75A25fCA122bb6898B8B1282a";
+const CEUR_ADDRESS     = "0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73";
 
-export function DashboardWalletView() {
-  const { isDarkMode } = useTheme();
-  
-  // WALLET A LOGIC (Privy/Wagmi)
-  const pathname = usePathname();
-  const isMiniPayRoute = pathname?.includes("/minipay");
-  const { user } = usePrivy();
-  const { address: wagmiAddress } = useAccount();
-  const walletAAddress = isMiniPayRoute ? wagmiAddress : user?.wallet?.address;
+const publicClient = createPublicClient({ chain: celo, transport: http("https://forno.celo.org") });
 
-  const [walletABalances, setWalletABalances] = useState({ celo: "0.00", gDollar: "0.00", cUSD: "0.00", cEUR: "0.00" });
+// ─── NEAR-inspired style tokens ───────────────────────────────────────────
+const S = {
+  card: (d: boolean) => d ? "bg-[#0d0d0d] border border-[#1f1f1e] rounded-2xl" : "bg-[#faf9f7] border border-[#dcd8d1] rounded-2xl",
+  inner: (d: boolean) => d ? "bg-[#121212] border border-[#1f1f1e] rounded-xl" : "bg-[#f2efeb] border border-[#dcd8d1] rounded-xl",
+  muted: (d: boolean) => d ? "text-[#7a7a78]" : "text-[#6b6862]",
+  txt: (d: boolean) => d ? "text-[#e2e2df]" : "text-[#0d0d0c]",
+  mint: "text-[#5FF5B4]",
+  sectionLabel: (d: boolean) => d ? "text-[10px] font-black uppercase tracking-[0.15em] text-[#7a7a78] flex items-center gap-1.5 mb-4" : "text-[10px] font-black uppercase tracking-[0.15em] text-[#6b6862] flex items-center gap-1.5 mb-4",
+  ctaPrimary: (d: boolean) => d ? "bg-[#5FF5B4] text-[#050505] font-black" : "bg-[#0d0d0c] text-[#f2efeb] font-black",
+  ghost: (d: boolean) => d ? "border border-[#1f1f1e] text-[#7a7a78]" : "border border-[#dcd8d1] text-[#6b6862]",
+};
 
+// ─── Wallet A balances ────────────────────────────────────────────────────
+function useWalletABalances(address: string | undefined) {
+  const [b, setB] = useState({ celo: "0.0000", cUSD: "0.00", cEUR: "0.00" });
   useEffect(() => {
-    if (!walletAAddress) return;
-    const fetchA = async () => {
-      const { createPublicClient, http, getAddress, formatEther, formatUnits } = await import("viem");
-      const { celo } = await import("viem/chains");
-      const publicClient = createPublicClient({ chain: celo, transport: http("https://forno.celo.org") });
-      const abi = [{ type: "function", name: "balanceOf", inputs: [{ name: "account", type: "address" }], outputs: [{ name: "", type: "uint256" }], stateMutability: "view" }] as const;
-      
-      const addr = walletAAddress as `0x${string}`;
+    if (!address) return;
+    const abi = [{ type: "function", name: "balanceOf", inputs: [{ name: "account", type: "address" }], outputs: [{ name: "", type: "uint256" }], stateMutability: "view" }] as const;
+    (async () => {
       try {
-        const [balCelo, balG, balCUSD, balCEUR] = await Promise.all([
+        const addr = address as `0x${string}`;
+        const [balCelo, balCUSD, balCEUR] = await Promise.all([
           publicClient.getBalance({ address: addr }).catch(() => 0n),
-          publicClient.readContract({ address: getAddress(G_DOLLAR_ADDRESS), abi, functionName: "balanceOf", args: [addr] }).catch(() => 0n),
-          publicClient.readContract({ address: getAddress(CUSD_ADDRESS), abi, functionName: "balanceOf", args: [addr] }).catch(() => 0n),
-          publicClient.readContract({ address: getAddress(CEUR_ADDRESS), abi, functionName: "balanceOf", args: [addr] }).catch(() => 0n),
+          publicClient.readContract({ address: CUSD_ADDRESS as `0x${string}`, abi, functionName: "balanceOf", args: [addr] }).catch(() => 0n),
+          publicClient.readContract({ address: CEUR_ADDRESS as `0x${string}`, abi, functionName: "balanceOf", args: [addr] }).catch(() => 0n),
         ]);
-
-        setWalletABalances({
+        setB({
           celo: parseFloat(formatEther(balCelo as bigint)).toFixed(4),
-          gDollar: parseFloat(formatUnits(balG as bigint, 18)).toFixed(2),
           cUSD: parseFloat(formatEther(balCUSD as bigint)).toFixed(2),
           cEUR: parseFloat(formatEther(balCEUR as bigint)).toFixed(2),
         });
-      } catch (e) {
-        console.error("Wallet A balance fetch error", e);
-      }
-    };
-    fetchA();
-  }, [walletAAddress]);
+      } catch {}
+    })();
+  }, [address]);
+  return b;
+}
 
-  // WALLET B LOGIC (Universal Provider Aislado)
-  const { 
-    connect: connectWalletB, 
-    disconnect: disconnectWalletB, 
-    address: walletBAddress, 
-    isConnecting: isConnectingB, 
-    balanceG: gDollarBalanceB,
-    balanceNativeB,
-    balanceCUSDB,
-    walletClientB
+// ─── ReFi metrics ─────────────────────────────────────────────────────────
+function useArtisanMetrics(address: string | undefined) {
+  const [m, setM] = useState({ totalReceived: "0.0000", salesCount: 0, poolDonations: "0.0000" });
+  useEffect(() => {
+    if (!address) return;
+    (async () => {
+      try {
+        const logs = await publicClient.getLogs({
+          address: REFI_SPLITTER_CONTRACT.address as `0x${string}`,
+          event: { type: "event", name: "ImpactGenerated", inputs: [
+            { name: "artesano", type: "address", indexed: true },
+            { name: "total", type: "uint256", indexed: false },
+            { name: "treasuryImpact", type: "uint256", indexed: false },
+            { name: "poolsImpact", type: "uint256", indexed: false },
+          ]},
+          args: { artesano: address as `0x${string}` },
+          fromBlock: 0n, toBlock: "latest",
+        });
+        let total = 0n, pools = 0n;
+        for (const log of logs) {
+          const a = log.args as any;
+          if (a.total) total += a.total;
+          if (a.poolsImpact) pools += a.poolsImpact;
+        }
+        setM({ totalReceived: parseFloat(formatEther((total * 90n) / 100n)).toFixed(4), salesCount: logs.length, poolDonations: parseFloat(formatEther(pools)).toFixed(4) });
+      } catch {}
+    })();
+  }, [address]);
+  return m;
+}
+
+// ─── Shared Wallet B / Goteo Component ─────────────────────────────────────
+function GoodWalletSection({ walletAAddress, isDark: d }: { walletAAddress: string | undefined; isDark: boolean }) {
+  const { connect: connectB, disconnect: disconnectB, address: walletB,
+    isConnecting: isConnectingB, balanceG, balanceNativeB, balanceCUSDB, walletClientB,
   } = useUbiFlowContext();
 
   const { checkEntitlement, claimUBI, isClaiming, entitlement, hasClaim, timeUntilNextClaim } = useUBIClaim();
   const { startStream, stopStream, checkActiveStream, isProcessing: isStreaming, DEFAULT_FLOW_RATE } = useSuperfluidStream();
 
-  const [isWhitelistedB, setIsWhitelistedB] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
   const [isStreamingActive, setIsStreamingActive] = useState(false);
   const [activeFlowRate, setActiveFlowRate] = useState<bigint>(0n);
   const [streamTick, setStreamTick] = useState(0);
 
-  // TICKER DEL RELOJ
   useEffect(() => {
     if (!isStreamingActive || activeFlowRate === 0n) return;
-    const interval = setInterval(() => {
-      setStreamTick(prev => prev + 1);
-    }, 1000);
-    return () => clearInterval(interval);
+    const t = setInterval(() => setStreamTick(p => p + 1), 100);
+    return () => clearInterval(t);
   }, [isStreamingActive, activeFlowRate]);
 
-  // BYPASS DE IDENTIDAD (Inferencia por Saldo G$)
   useEffect(() => {
-    if (walletBAddress) {
-      if (gDollarBalanceB > 0n) {
-        setIsWhitelistedB(true);
-        checkEntitlement(walletBAddress);
-      } else {
-        setIsWhitelistedB(false);
-      }
-      
-      // Consultar Flujos Activos de Superfluid
-      const fetchFlow = async () => {
-        const DESTINATION = walletAAddress || "0xE2f221A0D6Bb28e95D82CAfFc1d08875B3316174";
-        const flow = await checkActiveStream(walletBAddress, DESTINATION as string);
-        console.log("Superfluid Net Flow Detectado:", flow);
-        // Si el flow es distinto de 0, significa que ESTÁ ENVIANDO o RECIBIENDO fondos (está goteando)
-        if (flow !== 0n) {
-          setIsStreamingActive(true);
-          setActiveFlowRate(flow);
-        } else {
-          setIsStreamingActive(false);
-          setActiveFlowRate(0n);
-        }
-      };
-      fetchFlow();
-    } else {
-      setIsWhitelistedB(false);
-      setIsStreamingActive(false);
-      setActiveFlowRate(0n);
-    }
-  }, [walletBAddress, gDollarBalanceB, walletAAddress]);
-
-  const handleVerifyIdentity = () => {
-    // Si no tiene G$, simulamos o redirigimos al FaceTec
-    setIsVerifying(true);
-    setTimeout(() => {
-      setIsWhitelistedB(true);
-      setIsVerifying(false);
-      checkEntitlement(walletBAddress as string);
-    }, 2000);
-  };
-
+    if (!walletB) { setIsStreamingActive(false); return; }
+    const DEST = walletAAddress ?? "0xE2f221A0D6Bb28e95D82CAfFc1d08875B3316174";
+    checkActiveStream(walletB, DEST).then(flow => {
+      if (flow !== 0n) { setIsStreamingActive(true); setActiveFlowRate(flow); }
+      else { setIsStreamingActive(false); setActiveFlowRate(0n); }
+    });
+    if (balanceG > 0n) checkEntitlement(walletB);
+  }, [walletB, balanceG, walletAAddress]);
 
   const toggleStream = async () => {
-    if (!walletClientB || !walletBAddress) return;
-    const DESTINATION = walletAAddress || "0xE2f221A0D6Bb28e95D82CAfFc1d08875B3316174";
-    if (isStreamingActive) {
-      await stopStream(walletClientB, walletBAddress, DESTINATION as string);
-      setIsStreamingActive(false);
-    } else {
-      await startStream(walletClientB, walletBAddress, DESTINATION as string, DEFAULT_FLOW_RATE);
-      setIsStreamingActive(true);
-    }
+    if (!walletClientB || !walletB) return;
+    const DEST = walletAAddress ?? "0xE2f221A0D6Bb28e95D82CAfFc1d08875B3316174";
+    if (isStreamingActive) { await stopStream(walletClientB, walletB, DEST); setIsStreamingActive(false); }
+    else { await startStream(walletClientB, walletB, DEST, DEFAULT_FLOW_RATE); setIsStreamingActive(true); }
   };
 
-  const handleClaim = async () => {
-    if (!walletClientB || !walletBAddress) return;
-    await claimUBI(walletClientB, walletBAddress);
-  };
+  const absRate = activeFlowRate < 0n ? -activeFlowRate : activeFlowRate;
 
   return (
-    <div className={`flex flex-col gap-6 px-4 py-6 relative pb-24 min-h-screen ${isDarkMode ? "bg-[#0F0A1F] text-white" : "bg-[#faf8f5] text-slate-900"}`}>
-      
-      {/* WALLET A: LOGIN (Celo/MiniPay) */}
-      <section className={`p-5 rounded-[2rem] border shadow-xl ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-primary/20"}`}>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
-            <ShieldCheck size={16} /> Wallet A (Login/Gas)
-          </h3>
-          <span className="text-[8px] bg-emerald-500/10 text-emerald-500 px-2 py-1 rounded-full font-bold border border-emerald-500/20">
-            {walletAAddress ? "Connected" : "No Login"}
-          </span>
-        </div>
-        
-        <div className="flex flex-col gap-2">
-          <p className="text-[10px] font-mono opacity-70 truncate">{walletAAddress || "Inicia sesión para ver tu balance"}</p>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="flex flex-col bg-primary/5 p-3 rounded-xl border border-primary/10">
-              <span className="text-[10px] font-bold uppercase opacity-60">CELO</span>
-              <span className="text-sm font-black">{walletABalances.celo}</span>
-            </div>
-            <div className="flex flex-col bg-primary/5 p-3 rounded-xl border border-primary/10">
-              <span className="text-[10px] font-bold uppercase opacity-60">G$</span>
-              <span className="text-sm font-black text-primary">{walletABalances.gDollar}</span>
-            </div>
-            <div className="flex flex-col bg-primary/5 p-3 rounded-xl border border-primary/10">
-              <span className="text-[10px] font-bold uppercase opacity-60">cUSD</span>
-              <span className="text-sm font-black text-blue-600 dark:text-blue-400">{walletABalances.cUSD}</span>
-            </div>
-            <div className="flex flex-col bg-primary/5 p-3 rounded-xl border border-primary/10">
-              <span className="text-[10px] font-bold uppercase opacity-60">cEUR</span>
-              <span className="text-sm font-black text-green-600 dark:text-green-400">{walletABalances.cEUR}</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* WALLET B: UBI (GoodWallet) */}
-      <section className={`p-5 rounded-[2rem] border shadow-xl relative overflow-hidden ${isDarkMode ? "bg-primary/10 border-primary/30" : "bg-primary/5 border-primary/20"}`}>
-        <div className="absolute -right-10 -top-10 w-32 h-32 bg-primary/20 blur-[40px] rounded-full" />
-        
-        <div className="flex justify-between items-center mb-4 relative z-10">
-          <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
-            <Coins size={16} /> Wallet B (GoodWallet UBI)
-          </h3>
-          {!walletBAddress ? (
-            <button 
-              onClick={connectWalletB}
-              disabled={isConnectingB}
-              className="text-[8px] bg-primary text-white px-3 py-1.5 rounded-full font-black uppercase tracking-widest shadow-lg active:scale-95"
-            >
-              {isConnectingB ? <Loader2 size={12} className="animate-spin" /> : "Conectar B"}
-            </button>
-          ) : (
-            <button 
-              onClick={disconnectWalletB}
-              className="text-[8px] bg-red-500 text-white px-2 py-1 rounded-full font-bold border border-red-500/20 flex items-center gap-1 shadow-md hover:bg-red-600"
-            >
-              <PowerOff size={10} /> Desconectar
-            </button>
-          )}
-        </div>
-
-        {walletBAddress && (
-          <div className="flex flex-col gap-4 relative z-10 animate-fade-in">
-            <p className="text-[10px] font-mono opacity-70 truncate text-emerald-600 dark:text-emerald-400 font-bold">{walletBAddress}</p>
-            
-            <div className="grid grid-cols-3 gap-2">
-              <div className="flex flex-col items-center bg-emerald-500/10 p-2 rounded-xl border border-emerald-500/20">
-                <span className="text-[9px] font-bold uppercase text-emerald-600 dark:text-emerald-400 opacity-70">G$</span>
-                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">{parseFloat(formatUnits(gDollarBalanceB, 18)).toFixed(2)}</span>
-              </div>
-              <div className="flex flex-col items-center bg-blue-500/10 p-2 rounded-xl border border-blue-500/20">
-                <span className="text-[9px] font-bold uppercase text-blue-600 dark:text-blue-400 opacity-70">cUSD</span>
-                <span className="text-xs font-black text-blue-600 dark:text-blue-400">{parseFloat(formatEther(balanceCUSDB)).toFixed(2)}</span>
-              </div>
-              <div className="flex flex-col items-center bg-yellow-500/10 p-2 rounded-xl border border-yellow-500/20">
-                <span className="text-[9px] font-bold uppercase text-yellow-600 dark:text-yellow-400 opacity-70">CELO</span>
-                <span className="text-xs font-black text-yellow-600 dark:text-yellow-400">{parseFloat(formatEther(balanceNativeB)).toFixed(4)}</span>
-              </div>
-            </div>
-            
-            {/* Identity & Claim UBI */}
-            <div className={`p-4 rounded-2xl border ${isDarkMode ? "bg-black/40 border-white/10" : "bg-white/60 border-primary/10"}`}>
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-[10px] font-bold uppercase flex items-center gap-1 opacity-80">
-                  <Fingerprint size={14} /> G$ Identity
-                </span>
-                {!isWhitelistedB ? (
-                  <button 
-                    onClick={handleVerifyIdentity}
-                    disabled={isVerifying}
-                    className="text-[9px] font-black text-primary hover:underline flex items-center gap-1"
-                  >
-                    {isVerifying ? <Loader2 size={12} className="animate-spin" /> : "FaceTec Verificación →"}
-                  </button>
-                ) : (
-                  <span className="text-emerald-500 font-black text-[9px] uppercase flex items-center gap-1">
-                    <UserCheck size={12} /> Verificado (Bypass)
-                  </span>
-                )}
-              </div>
-
-              {/* Botón Claim UBI (Sólo si está verificado) */}
-              {isWhitelistedB ? (
-                <div className="mt-2 flex flex-col items-center">
-                  <div className="w-full flex justify-between items-center bg-primary/10 p-3 rounded-xl mb-3">
-                    <span className="text-[10px] font-bold uppercase">UBI Disponible</span>
-                    <span className="text-xs font-black text-primary">
-                      {hasClaim ? formatUnits(entitlement, 18) : "0.00"} G$
-                    </span>
-                  </div>
-                  <button 
-                    onClick={handleClaim}
-                    disabled={isClaiming || !hasClaim}
-                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black text-[10px] uppercase py-3 rounded-xl shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95 transition-all"
-                  >
-                    {isClaiming ? <Loader2 size={16} className="animate-spin" /> : <Coins size={16} />}
-                    {hasClaim ? `Reclamar ${formatUnits(entitlement, 18)} G$` : `Vuelve en ${timeUntilNextClaim}`}
-                  </button>
-                </div>
-              ) : (
-                <p className="text-[10px] text-muted-foreground text-center mt-2">
-                  Verifica tu rostro en GoodDollar (o recibe G$) para desbloquear el reclamo del UBI.
-                </p>
-              )}
-            </div>
-
-            {/* Superfluid Streaming */}
-            <div className={`p-4 rounded-2xl border ${isDarkMode ? "bg-black/40 border-white/10" : "bg-white/60 border-primary/10"}`}>
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-[10px] font-bold uppercase flex items-center gap-1 text-teal-500">
-                  <Droplets size={14} /> Superfluid Stream
-                </span>
-                <span className="text-[9px] font-mono opacity-80">2,000 G$ / Mes</span>
-              </div>
-              
-              {/* Reloj de Conteo Superfluid */}
-              {isStreamingActive && (
-                <div className="flex flex-col items-center justify-center my-3 gap-2">
-                  <div className="animate-pulse bg-teal-500/20 text-teal-500 px-4 py-2 rounded-full font-mono text-xs font-black border border-teal-500/30">
-                    {activeFlowRate < 0n ? "Enviando" : "Recibiendo"} {parseFloat(formatEther(activeFlowRate < 0n ? -activeFlowRate : activeFlowRate)).toFixed(6)} G$ / seg
-                  </div>
-                  <div className="text-[10px] text-teal-500/80 font-mono font-bold">
-                    Flujo en esta sesión: <span className="text-teal-400">{parseFloat(formatEther((activeFlowRate < 0n ? -activeFlowRate : activeFlowRate) * BigInt(streamTick))).toFixed(6)}</span> G$
-                  </div>
-                </div>
-              )}
-
-              <button 
-                onClick={toggleStream}
-                disabled={isStreaming}
-                className={`w-full font-black text-[10px] uppercase py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${
-                  isStreamingActive 
-                    ? "bg-red-500 text-white hover:bg-red-600" 
-                    : "bg-teal-500 text-white hover:bg-teal-600"
-                }`}
-              >
-                {isStreaming ? <Loader2 size={16} className="animate-spin" /> : <Droplets size={16} />}
-                {isStreamingActive ? "Detener Goteo" : "Patrocinar Artesano"}
-              </button>
-            </div>
-
-          </div>
+    <section className={`p-5 relative overflow-hidden ${S.card(d)}`}>
+      {d && <div className="pointer-events-none absolute -top-8 -right-8 w-32 h-32 rounded-full bg-[#5FF5B4]/8 blur-[50px]" />}
+      <div className="flex items-center justify-between mb-4">
+        <span className={S.sectionLabel(d)}><Coins size={12} /> GoodWallet UBI</span>
+        {!walletB ? (
+          <button onClick={connectB} disabled={isConnectingB}
+            className={`text-[8px] px-3 py-1.5 rounded-full font-black uppercase tracking-widest transition-all active:scale-95 ${S.ctaPrimary(d)}`}>
+            {isConnectingB ? <Loader2 size={11} className="animate-spin" /> : "Conectar B"}
+          </button>
+        ) : (
+          <button onClick={disconnectB}
+            className={`text-[8px] px-2 py-1 rounded-full font-bold flex items-center gap-1 ${S.ghost(d)}`}>
+            <PowerOff size={9} /> Desconectar
+          </button>
         )}
+      </div>
+
+      {walletB && (
+        <div className="flex flex-col gap-3">
+          <p className={`text-[9px] font-mono truncate ${S.muted(d)}`}>{walletB}</p>
+          <div className="grid grid-cols-3 gap-2">
+            <div className={`flex flex-col p-2.5 ${S.inner(d)}`}>
+              <span className={`text-[8px] font-bold uppercase mb-1 ${S.muted(d)}`}>G$</span>
+              <span className={`text-xs font-black tabular-nums ${S.mint}`}>{parseFloat(formatUnits(balanceG, 18)).toFixed(2)}</span>
+            </div>
+            <div className={`flex flex-col p-2.5 ${S.inner(d)}`}>
+              <span className={`text-[8px] font-bold uppercase mb-1 ${S.muted(d)}`}>cUSD</span>
+              <span className={`text-xs font-black tabular-nums ${S.txt(d)}`}>{parseFloat(formatEther(balanceCUSDB)).toFixed(2)}</span>
+            </div>
+            <div className={`flex flex-col p-2.5 ${S.inner(d)}`}>
+              <span className={`text-[8px] font-bold uppercase mb-1 ${S.muted(d)}`}>CELO</span>
+              <span className={`text-xs font-black tabular-nums ${S.txt(d)}`}>{parseFloat(formatEther(balanceNativeB)).toFixed(4)}</span>
+            </div>
+          </div>
+
+          <div className={`p-4 ${S.inner(d)}`}>
+            <div className="flex justify-between items-center mb-3">
+              <span className={`text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 ${S.muted(d)}`}><Fingerprint size={12} /> UBI disponible</span>
+              <span className={`text-sm font-black tabular-nums ${S.mint}`}>{hasClaim ? formatUnits(entitlement, 18) : "0.00"} G$</span>
+            </div>
+            <button onClick={() => claimUBI(walletClientB!, walletB)} disabled={isClaiming || !hasClaim || !walletClientB}
+              className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-40 ${S.ctaPrimary(d)}`}>
+              {isClaiming ? <Loader2 size={13} className="animate-spin" /> : <Coins size={13} />}
+              {hasClaim ? `Reclamar ${formatUnits(entitlement, 18)} G$` : `Vuelve en ${timeUntilNextClaim}`}
+            </button>
+          </div>
+
+          <div className={`p-4 ${S.inner(d)}`}>
+            <div className="flex justify-between items-center mb-3">
+              <span className={`text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 ${S.muted(d)}`}><Droplets size={12} /> Goteo Superfluid</span>
+              <span className={`text-[8px] font-mono ${S.muted(d)}`}>2,000 G$/mes</span>
+            </div>
+            {isStreamingActive && (
+              <div className={`flex flex-col items-center py-3 mb-3 rounded-xl border ${d ? "border-[#5FF5B4]/20 bg-[#5FF5B4]/5" : "border-[#00c27b]/15 bg-[#00c27b]/5"}`}>
+                <span className={`text-xs font-black font-mono tabular-nums ${S.mint}`}>+{parseFloat(formatEther(absRate)).toFixed(8)} G$/seg</span>
+                <span className={`text-[9px] font-mono mt-1 ${S.muted(d)}`}>Esta sesión: <span className={`font-black ${S.mint}`}>{parseFloat(formatEther(absRate * BigInt(Math.floor(streamTick / 10)))).toFixed(8)}</span> G$</span>
+              </div>
+            )}
+            <button onClick={toggleStream} disabled={isStreaming}
+              className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 ${isStreamingActive ? S.ghost(d) : S.ctaPrimary(d)}`}>
+              {isStreaming ? <Loader2 size={13} className="animate-spin" /> : <Droplets size={13} />}
+              {isStreamingActive ? "Detener Goteo" : "Iniciar Goteo"}
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TOURIST VIEW
+// ═══════════════════════════════════════════════════════════════════════════
+function TouristView({ walletAAddress, walletABalances, gDollarFormatted, onNavigate }: {
+  walletAAddress: string | undefined;
+  walletABalances: ReturnType<typeof useWalletABalances>;
+  gDollarFormatted: string;
+  onNavigate?: (tab: any) => void;
+}) {
+  const { isDarkMode: d } = useTheme();
+
+  return (
+    <div className="flex flex-col gap-3">
+      <section className={`p-5 relative overflow-hidden ${S.card(d)}`}>
+        {d && <div className="pointer-events-none absolute -top-10 -right-10 w-40 h-40 rounded-full bg-[#5FF5B4]/8 blur-[50px]" />}
+        <div className="flex items-center justify-between mb-4">
+          <span className={S.sectionLabel(d)}><Wallet size={12} /> Wallet Principal (A)</span>
+          <span className={`text-[8px] px-2 py-0.5 rounded-full font-bold ${S.ghost(d)}`}>{walletAAddress ? "Celo Mainnet" : "Desconectada"}</span>
+        </div>
+        <p className={`text-[9px] font-mono truncate mb-3 ${S.muted(d)}`}>{walletAAddress ?? "—"}</p>
+        <div className="grid grid-cols-2 gap-2">
+          <div className={`flex flex-col p-3 ${S.inner(d)}`}><span className={`text-[8px] font-bold uppercase mb-1 ${S.muted(d)}`}>CELO</span><span className={`text-sm font-black tabular-nums ${S.txt(d)}`}>{walletABalances.celo}</span></div>
+          <div className={`flex flex-col p-3 ${S.inner(d)}`}><span className={`text-[8px] font-bold uppercase mb-1 ${S.muted(d)}`}>G$</span><span className={`text-sm font-black tabular-nums ${S.mint}`}>{gDollarFormatted}</span></div>
+        </div>
       </section>
 
+      <GoodWalletSection walletAAddress={walletAAddress} isDark={d} />
+
+      <div className="grid grid-cols-2 gap-2">
+        {([
+          { tab: "pasaporte", Icon: Stamp,       label: "Pasaporte",  sub: "Sellos & rutas" },
+          { tab: "tienda",    Icon: ShoppingBag, label: "Tienda",     sub: "Artesanías digitales" },
+          { tab: "comunidad", Icon: Users,       label: "Comunidad",  sub: "Fotos & momentos" },
+          { tab: "impacto",   Icon: TrendingUp,  label: "Impacto",    sub: "Métricas ReFi" },
+        ] as const).map(({ tab, Icon, label, sub }) => (
+          <button key={tab} onClick={() => onNavigate?.(tab as any)}
+            className={`group flex flex-col gap-3 p-4 text-left transition-all active:scale-95 hover:opacity-90 ${S.card(d)}`}>
+            <Icon size={15} className={S.muted(d)} />
+            <div><p className={`text-[11px] font-black uppercase tracking-tight ${S.txt(d)}`}>{label}</p><p className={`text-[9px] ${S.muted(d)}`}>{sub}</p></div>
+            <ArrowUpRight size={11} className={`ml-auto ${S.muted(d)} group-hover:text-[#5FF5B4] transition-colors`} />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ARTISAN VIEW
+// ═══════════════════════════════════════════════════════════════════════════
+function ArtisanView({ walletAAddress, walletABalances, gDollarFormatted }: {
+  walletAAddress: string | undefined;
+  walletABalances: ReturnType<typeof useWalletABalances>;
+  gDollarFormatted: string;
+}) {
+  const { isDarkMode: d } = useTheme();
+  const metrics = useArtisanMetrics(walletAAddress);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <section className={`p-5 relative overflow-hidden ${S.card(d)}`}>
+        {d && <div className="pointer-events-none absolute -bottom-8 -left-8 w-36 h-36 rounded-full bg-[#5FF5B4]/6 blur-[50px]" />}
+        <span className={S.sectionLabel(d)}><Activity size={12} /> Métricas ReFi</span>
+        <div className="grid grid-cols-3 gap-2">
+          <div className={`flex flex-col p-3 ${S.inner(d)}`}><span className={`text-[8px] font-bold uppercase mb-1 ${S.muted(d)}`}>Ganado</span><span className={`text-sm font-black tabular-nums ${S.mint}`}>{metrics.totalReceived}</span><span className={`text-[7px] font-bold ${S.muted(d)}`}>CELO</span></div>
+          <div className={`flex flex-col p-3 ${S.inner(d)}`}><span className={`text-[8px] font-bold uppercase mb-1 ${S.muted(d)}`}>Ventas</span><span className={`text-sm font-black tabular-nums ${S.txt(d)}`}>{metrics.salesCount}</span><span className={`text-[7px] font-bold ${S.muted(d)}`}>TOTAL</span></div>
+          <div className={`flex flex-col p-3 ${S.inner(d)}`}><span className={`text-[8px] font-bold uppercase mb-1 ${S.muted(d)}`}>Pools</span><span className={`text-sm font-black tabular-nums ${S.txt(d)}`}>{metrics.poolDonations}</span><span className={`text-[7px] font-bold ${S.muted(d)}`}>CELO</span></div>
+        </div>
+      </section>
+
+      <section className={`p-5 ${S.card(d)}`}>
+        <div className="flex items-center justify-between mb-4">
+          <span className={S.sectionLabel(d)}><ShieldCheck size={12} /> Wallet Principal</span>
+          <span className={`text-[8px] px-2 py-0.5 rounded-full font-bold ${S.ghost(d)}`}>{walletAAddress ? "Celo Mainnet" : "—"}</span>
+        </div>
+        <p className={`text-[9px] font-mono truncate mb-3 ${S.muted(d)}`}>{walletAAddress ?? "—"}</p>
+        <div className="grid grid-cols-2 gap-2">
+          <div className={`flex flex-col p-3 ${S.inner(d)}`}><span className={`text-[8px] font-bold uppercase mb-1 ${S.muted(d)}`}>CELO</span><span className={`text-sm font-black tabular-nums ${S.txt(d)}`}>{walletABalances.celo}</span></div>
+          <div className={`flex flex-col p-3 ${S.inner(d)}`}><span className={`text-[8px] font-bold uppercase mb-1 ${S.muted(d)}`}>G$</span><span className={`text-sm font-black tabular-nums ${S.mint}`}>{gDollarFormatted}</span></div>
+        </div>
+      </section>
+
+      <GoodWalletSection walletAAddress={walletAAddress} isDark={d} />
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN EXPORT
+// ═══════════════════════════════════════════════════════════════════════════
+export function DashboardWalletView({ onNavigate }: { onNavigate?: (tab: any) => void } = {}) {
+  const { isDarkMode: d } = useTheme();
+  const { userRole, gDollarFormatted } = useGlobal();
+  const { user } = usePrivy();
+  const { address: wagmiAddress } = useAccount();
+  const walletAAddress = (wagmiAddress ?? user?.wallet?.address) as `0x${string}` | undefined;
+  const walletABalances = useWalletABalances(walletAAddress);
+  const role = userRole ?? "turista";
+
+  return (
+    <div className={`flex flex-col gap-3 px-4 py-5 pb-28 min-h-screen ${d ? "bg-[#050505]" : "bg-[#f2efeb]"}`}>
+      {role === "turista" ? (
+        <TouristView walletAAddress={walletAAddress} walletABalances={walletABalances} gDollarFormatted={gDollarFormatted} onNavigate={onNavigate} />
+      ) : (
+        <ArtisanView walletAAddress={walletAAddress} walletABalances={walletABalances} gDollarFormatted={gDollarFormatted} />
+      )}
     </div>
   );
 }
