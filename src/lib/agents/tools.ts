@@ -13,14 +13,14 @@
  * Contexto: Diseñado para "Artesanía Viajera" (ReFi - Regenerative Finance).
  */
 
+import { ethers } from 'ethers';
+
 // Billetera Oficial del Agente CAJERO (IA):
 export const CAJERO_WALLET = "0xD9c10131d92f50335569a48A4b58d74f1865Da01";
 
 // ==========================================
 // 📝 1. DEFINICIÓN DE HERRAMIENTAS (SCHEMAS)
 // ==========================================
-// Estos objetos le dicen al "cerebro" (Gemini) qué datos necesita pedir 
-// antes de poder ejecutar una función.
 
 export const scanGeofenceTool = {
     name: "scan_geofence_activity",
@@ -44,7 +44,7 @@ export const executePaymentRoutingTool = {
         properties: {
             artesanoAddress: { type: "STRING", description: "Dirección de la wallet del artesano receptor (0x...)" },
             monto: { type: "NUMBER", description: "Cantidad a enviar (Ej: 15.5)" },
-            token: { type: "STRING", description: "Moneda estable a usar en Celo: cUSD, USDC o G$" }
+            token: { type: "STRING", description: "Moneda estable a usar en Celo: CELO, cUSD o USDC" }
         },
         required: ["artesanoAddress", "monto", "token"]
     }
@@ -53,104 +53,120 @@ export const executePaymentRoutingTool = {
 // ==========================================
 // ⚙️ 2. LÓGICA DE EJECUCIÓN (LAS FUNCIONES)
 // ==========================================
-// Aquí es donde la magia ocurre. Cuando el agente decide usar una herramienta,
-// el código de abajo se ejecuta.
 
-/**
- * 🛡️ EJECUCIÓN DEL AGENTE CIVIL (Inspector)
- * Implementa conceptos de ERC-8004 (Agent Trust Protocol).
- * 
- * @param args - Los argumentos que el LLM recopiló (farmerAddress, destinoId, etc)
- */
 export async function executeScanGeofence(args: any) {
     console.log("[CIVIL-AGENT] 📍 Iniciando validación Geofence (ERC-8004)...", args);
-    
-    // --- LÓGICA ERC-8004 (SIMULADA / PREPARADA) ---
-    // En producción, aquí usaríamos @chaoschain/sdk para:
-    // 1. registry.register() o consultar el IdentityRegistry (0x8004...)
-    // 2. reputation.giveFeedback() para sumar reputación por un check-in exitoso.
-    
-    /* Ejemplo de cómo se vería el código real (comentado para guiar al junior):
-    import { ReputationRegistry } from '@chaoschain/sdk';
-    const reputation = new ReputationRegistry(provider);
-    await reputation.giveFeedback(
-      agentId, // ID del agente o usuario
-      90,      // Score de reputación (Check-in válido)
-      0,
-      'valid_checkin', 
-      '', 
-      'https://artesania-viajera.com',
-      'ipfs://QmFeedback',
-      hash
-    );
-    */
-
     return {
         success: true,
-        simulation: true, // Indica que no gastó gas real aún
+        simulation: true,
         standard: "ERC-8004",
         message: `Check-in validado en destino ${args.destinoId}. Identidad verificada y Reputación sumada según ERC-8004.`
     };
 }
 
-/**
- * 💸 EJECUCIÓN DEL AGENTE CAJERO (Finanzas)
- * Implementa conceptos de x402 (Agent Payments).
- * 
- * @param args - Los argumentos que el LLM recopiló (artesanoAddress, monto, token)
- */
+const ERC20_ABI = ["function transfer(address to, uint256 amount) returns (bool)"];
+const TOKEN_ADDRESSES: { [key: string]: string } = {
+    "cUSD": "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+    "USDC": "0xcebA9300f2b948710d2653dD7B07f33A8B32118C"
+};
+
+// Direcciones de la Tesorería y Pools ReFi (Usa minúsculas para evitar errores de checksum)
+const TESORERIA_DAPP = "0x82b260d0f31bea7909a0bbb0327f1a1bb31b0575"; // Ajusta a la real
+const POOL_GOODDOLLAR = "0x4016bcd00595304b7b0d366c8b6e507de7896d8b"; // Ajusta a la real
+const POOL_ARTESANIA = "0x98a19b36e2bcbc8dc69bb82ddedbc3aec8f71221"; // Ajusta a la real
+
 export async function executePaymentRouting(args: any) {
-    console.log(`[CAJERO-AGENT: ${CAJERO_WALLET}] 💸 Iniciando enrutamiento de pago (x402)...`, args);
-    
-    // --- LÓGICA DE DIVISIÓN (SPLIT) REFI ---
-    // 90% para el artesano
-    // 5% para la DApp Artesanía Viajera
-    // 5% repartido entre dos pools (2.5% GoodDollar UBI, 2.5% Artesania UBI)
+    console.log(`[CAJERO-AGENT: ${CAJERO_WALLET}] 💸 Iniciando enrutamiento de pago REAL (x402)...`, args);
     
     const montoBase = parseFloat(args.monto);
-    const splitArtesano = (montoBase * 0.90).toFixed(4);
-    const splitDapp = (montoBase * 0.05).toFixed(4);
-    const splitPoolGD = (montoBase * 0.025).toFixed(4);
-    const splitPoolArtesania = (montoBase * 0.025).toFixed(4);
+    const splitArtesano = montoBase * 0.90;
+    const splitDapp = montoBase * 0.05;
+    const splitPoolGD = montoBase * 0.025;
+    const splitPoolArtesania = montoBase * 0.025;
 
-    console.log(`[CAJERO-AGENT] 🧮 Cálculo de Distribución:
-    - Artesano (${args.artesanoAddress}): ${splitArtesano} ${args.token}
-    - Tesorería DApp: ${splitDapp} ${args.token}
-    - Pool GoodDollar: ${splitPoolGD} ${args.token}
-    - Pool Artesanía: ${splitPoolArtesania} ${args.token}
+    console.log(`[CAJERO-AGENT] 🧮 Distribución calculada:
+    - Artesano (${args.artesanoAddress}): ${splitArtesano.toFixed(4)} ${args.token}
+    - Tesorería DApp: ${splitDapp.toFixed(4)} ${args.token}
+    - Pool GoodDollar: ${splitPoolGD.toFixed(4)} ${args.token}
+    - Pool Artesanía: ${splitPoolArtesania.toFixed(4)} ${args.token}
     `);
 
-    // --- LÓGICA x402 (SIMULADA / PREPARADA) ---
-    // En producción, aquí usaríamos el SDK de Thirdweb (o Viem con la Private Key de CAJERO_WALLET)
-    // para hacer el settlePayment o multicall transfiriendo estos montos exactos.
-    
-    /* Ejemplo de cómo se vería el código real (comentado para guiar al junior):
-    import { settlePayment, facilitator } from "thirdweb/x402";
-    import { celo } from "thirdweb/chains";
-    
-    const result = await settlePayment({
-      resourceUrl: "https://artesania-viajera.com/tienda",
-      method: "POST",
-      paymentData: "0xSignature...", 
-      payTo: args.artesanoAddress, // El dinero va directo al artesano ReFi
-      network: celo,               // Red Celo Mainnet
-      price: splitArtesano.toString(),
-      facilitator: thirdwebFacilitator,
-    });
-    // Y luego repetir para los pools...
-    */
+    try {
+        const privateKey = process.env.AGENT_PRIVATE_KEY;
+        if (!privateKey) throw new Error("AGENT_PRIVATE_KEY no configurada en el servidor.");
 
-    return {
-        success: true,
-        simulation: true,
-        standard: "x402",
-        agentWallet: CAJERO_WALLET,
-        splits: {
-            artesano: splitArtesano,
-            dapp: splitDapp,
-            poolGD: splitPoolGD,
-            poolArtesania: splitPoolArtesania
-        },
-        message: `Pago enrutado con éxito por el Agente CAJERO. El artesano recibió ${splitArtesano} ${args.token} y ${parseFloat(splitDapp) + parseFloat(splitPoolGD) + parseFloat(splitPoolArtesania)} ${args.token} fueron distribuidos a los pools ReFi.`
-    };
+        const provider = new ethers.JsonRpcProvider("https://forno.celo.org");
+        const wallet = new ethers.Wallet(privateKey, provider);
+        const tokenUpper = args.token.toUpperCase();
+
+        let txHashes = [];
+        
+        // Obtener el Nonce actual para poder enviar 4 transacciones seguidas sin chocar
+        let currentNonce = await wallet.getNonce();
+
+        // Función auxiliar para enviar
+        const enviarPago = async (destino: string, cantidad: number) => {
+            if (cantidad <= 0) return null;
+            
+            const nonceToUse = currentNonce++; // Usar y luego incrementar
+            
+            if (tokenUpper === "CELO") {
+                // CELO tiene 18 decimales. toFixed(18) evita errores de coma flotante de JS
+                const cantidadStr = cantidad.toFixed(18);
+                const tx = await wallet.sendTransaction({
+                    to: destino,
+                    value: ethers.parseEther(cantidadStr),
+                    nonce: nonceToUse
+                });
+                return tx.hash;
+            } else if (TOKEN_ADDRESSES[tokenUpper]) {
+                const contract = new ethers.Contract(TOKEN_ADDRESSES[tokenUpper], ERC20_ABI, wallet);
+                const decimals = tokenUpper === "USDC" ? 6 : 18;
+                // Redondear la cantidad a los decimales exactos del token para evitar NUMERIC_FAULT
+                const cantidadStr = cantidad.toFixed(decimals);
+                const tx = await contract.transfer(destino, ethers.parseUnits(cantidadStr, decimals), { nonce: nonceToUse });
+                return tx.hash;
+            } else {
+                throw new Error(`Token no soportado: ${tokenUpper}`);
+            }
+        };
+
+        console.log("⏳ Enviando transacción 1/4 (Artesano)...");
+        const tx1 = await enviarPago(args.artesanoAddress, splitArtesano);
+        if(tx1) txHashes.push(tx1);
+
+        console.log("⏳ Enviando transacción 2/4 (Tesorería DApp)...");
+        const tx2 = await enviarPago(TESORERIA_DAPP, splitDapp);
+        if(tx2) txHashes.push(tx2);
+
+        console.log("⏳ Enviando transacción 3/4 (Pool GoodDollar)...");
+        const tx3 = await enviarPago(POOL_GOODDOLLAR, splitPoolGD);
+        if(tx3) txHashes.push(tx3);
+
+        console.log("⏳ Enviando transacción 4/4 (Pool Artesanía)...");
+        const tx4 = await enviarPago(POOL_ARTESANIA, splitPoolArtesania);
+        if(tx4) txHashes.push(tx4);
+
+        return {
+            success: true,
+            simulation: false, // ¡ES REAL!
+            standard: "x402",
+            agentWallet: CAJERO_WALLET,
+            txHashes,
+            splits: {
+                artesano: splitArtesano.toFixed(4),
+                dapp: splitDapp.toFixed(4),
+                poolGD: splitPoolGD.toFixed(4),
+                poolArtesania: splitPoolArtesania.toFixed(4)
+            },
+            message: `¡Pago on-chain ejecutado con éxito! El agente transfirió fondos directamente en la blockchain de Celo. TXs: ${txHashes.join(", ")}`
+        };
+
+    } catch (error: any) {
+        console.error("❌ Error en el pago On-Chain:", error.message);
+        return {
+            success: false,
+            message: `El agente intentó enviar el pago on-chain pero falló: ${error.message}. (Verifica que la wallet del Agente CAJERO tenga fondos suficientes de gas y tokens).`
+        };
+    }
 }

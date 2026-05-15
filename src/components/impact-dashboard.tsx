@@ -79,8 +79,8 @@ export function ImpactDashboard({ onNavigate }: { onNavigate?: (tab: any) => voi
 
       {/* Fund Distribution */}
       <section className={`p-5 rounded-2xl border ${N.card}`}>
-        <p className={`text-[10px] font-black uppercase tracking-[0.15em] mb-4 flex items-center gap-1.5 ${N.muted}`}>
-          <Map size={12} /> Distribución de Fondos
+        <p className={`text-[10px] font-black uppercase tracking-[0.15em] mb-4 flex items-center justify-between ${N.muted}`}>
+          <span className="flex items-center gap-1.5"><Map size={12} /> Distribución de Fondos</span>
         </p>
         <div className="flex flex-col gap-4">
           {splits.map(({ icon: Icon, label, pct, val }) => (
@@ -100,6 +100,11 @@ export function ImpactDashboard({ onNavigate }: { onNavigate?: (tab: any) => voi
               </div>
             </div>
           ))}
+        </div>
+        <div className="mt-6 pt-4 border-t border-dashed border-[#dcd8d1] dark:border-[#1f1f1e]">
+          <a href="/agentes" className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all ${d ? "bg-[#1a1a18] text-[#5FF5B4] hover:bg-[#242422]" : "bg-[#e2e1de] text-[#00a368] hover:bg-[#dcd8d1]"}`}>
+            <Activity size={14} /> Ver Logs de Inteligencia Artificial (x402)
+          </a>
         </div>
       </section>
 

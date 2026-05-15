@@ -22,7 +22,6 @@ import { ReFiCheckoutModal } from "./refi-checkout-modal";
 import { WalletBalanceButton } from "@/components/wallet-balance-button";
 import { ImpactCounter } from "@/components/impact-counter";
 import { useAgent } from "@/lib/agent-context";
-
 // 🟢 NUEVO: Configuración de Tokens ERC-20
 const G_DOLLAR_ADDRESS = "0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A";
 const USDT_ADDRESS = "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e"; // Dirección correcta de USDT nativo en Celo Mainnet
