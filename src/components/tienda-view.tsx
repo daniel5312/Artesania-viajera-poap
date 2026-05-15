@@ -21,6 +21,7 @@ import { REFI_SPLITTER_CONTRACT } from "@/constants/contracts";
 import { ReFiCheckoutModal } from "./refi-checkout-modal";
 import { WalletBalanceButton } from "@/components/wallet-balance-button";
 import { ImpactCounter } from "@/components/impact-counter";
+import { useAgent } from "@/lib/agent-context";
 
 // 🟢 NUEVO: Configuración de Tokens ERC-20
 const G_DOLLAR_ADDRESS = "0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A";
@@ -168,6 +169,7 @@ export function TiendaView({ onNavigate }: { onNavigate?: (tab: any) => void } =
 
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { sendMessage, isLoading: agentLoading } = useAgent();
 
   const {
     isLoading: isConfirmingPayment,
@@ -525,6 +527,14 @@ export function TiendaView({ onNavigate }: { onNavigate?: (tab: any) => void } =
                   <button onClick={() => { setSelectedProduct(nft); setIsModalOpen(true); }}
                     className={`w-full py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 active:scale-95 ${N.cta}`}>
                     Checkout ReFi
+                  </button>
+
+                  <button 
+                    onClick={() => sendMessage(`El usuario quiere comprar ${nft.name}. Por favor enruta el pago de ${nft.price} CELO al artesano ${nft.wallet}.`, "CAJERO")}
+                    disabled={agentLoading}
+                    className={`w-full py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 border transition-all ${isDarkMode ? "border-green-500/30 text-green-400 hover:bg-green-500/10" : "border-green-600/30 text-green-700 hover:bg-green-600/10"} disabled:opacity-50`}
+                  >
+                    {agentLoading ? "🤖 Pensando..." : "🤖 Vía CAJERO (x402)"}
                   </button>
 
                   {/* Fast pay row */}

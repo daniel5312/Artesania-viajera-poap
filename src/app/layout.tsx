@@ -3,7 +3,8 @@
 import FarcasterLoader from "app/components/farcasterLoader";
 import "./globals.css";
 import Providers from "@/components/privyProvider";
-//import Navbar from "app/components/navbar";
+import { AgentProvider } from "@/lib/agent-context";
+import { AgentNotifications } from "@/components/agent-notifications";
 
 export default function RootLayout({
   children,
@@ -20,7 +21,10 @@ export default function RootLayout({
         <Providers>
           {/*<Navbar />*/}
           <FarcasterLoader />
-          {children}
+          <AgentProvider>
+            {children}
+            <AgentNotifications />
+          </AgentProvider>
         </Providers>
       </body>
     </html>

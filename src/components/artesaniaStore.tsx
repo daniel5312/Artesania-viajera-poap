@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { ethers } from "ethers";
+import { useAgent } from "@/lib/agent-context";
 
 const PRODUCTS = [
   {
@@ -36,6 +37,7 @@ export default function ArtesaniaStore() {
   const { authenticated, login } = usePrivy();
   const { wallets } = useWallets();
   const [buyingId, setBuyingId] = useState<number | null>(null);
+  const { sendMessage, isLoading: agentLoading } = useAgent();
   const [networkMode, setNetworkMode] = useState<"sepolia" | "mainnet">(
     "sepolia",
   );
@@ -118,13 +120,22 @@ export default function ArtesaniaStore() {
                   {networkMode === "mainnet" ? prod.priceReal : prod.priceTest}{" "}
                   CELO
                 </span>
-                <button
-                  onClick={() => handleBuy(prod)}
-                  disabled={buyingId !== null}
-                  className="bg-white text-black px-4 py-2 rounded-lg text-xs font-black disabled:opacity-50"
-                >
-                  {buyingId === prod.id ? "Procesando..." : "Comprar"}
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => handleBuy(prod)}
+                    disabled={buyingId !== null}
+                    className="bg-white text-black px-4 py-2 rounded-lg text-xs font-black disabled:opacity-50"
+                  >
+                    {buyingId === prod.id ? "Procesando..." : "Comprar"}
+                  </button>
+                  <button
+                    onClick={() => sendMessage(`El usuario quiere comprar ${prod.name}. Por favor enruta el pago de ${networkMode === "mainnet" ? prod.priceReal : prod.priceTest} CELO al artesano 0xArtesano.`, "CAJERO")}
+                    disabled={agentLoading}
+                    className="bg-transparent border border-green-500/30 text-green-400 hover:bg-green-500/10 px-4 py-2 rounded-lg text-[10px] uppercase font-black transition-colors disabled:opacity-50"
+                  >
+                    {agentLoading ? "🤖 Pensando..." : "🤖 Vía CAJERO"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
