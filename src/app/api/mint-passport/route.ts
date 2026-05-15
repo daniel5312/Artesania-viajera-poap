@@ -1,115 +1,27 @@
 import { NextResponse } from "next/server";
-import { createWalletClient, http, publicActions, isAddress } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { celo } from "viem/chains";
-import { PASSPORT_CONTRACT } from "@/constants/contracts";
-import { PrivyClient } from "@privy-io/server-auth";
-
-const privy = new PrivyClient(
-    process.env.NEXT_PUBLIC_PRIVY_APP_ID || "",
-    process.env.PRIVY_APP_SECRET || ""
-);
-
-// ============================================================
-// 🏆 SELLOS OFICIALES — Colección Antioquia (16 Destinos)
-// Para activar: reemplaza QmPENDING_X con el CID real de Pinata
-// y actualiza URI_TO_PUEBLO en pasaporte-view.tsx y comunidad-view.tsx
-// ============================================================
-const SELLOS_IPFS: Record<string, string> = {
-  // ✅ ACTIVOS
-  guatape_socalos:            "https://gateway.pinata.cloud/ipfs/bafkreigqcbgkpmhml3zahydb7hq7gb373nhtjbssc4lko6su42l6tzrxf4",
-  sombrillas_guatape:         "https://gateway.pinata.cloud/ipfs/bafkreiegxd63qmcetnfhryf3x7uk63ayxnezqpx7nk6zup3532dzzfznu4",
-  // 🔜 ORIENTE ANTIOQUEÑO
-  el_penol_piedra:            "https://gateway.pinata.cloud/ipfs/QmPENDING_ElPenol",
-  rionegro_colonial:          "https://gateway.pinata.cloud/ipfs/QmPENDING_Rionegro",
-  la_ceja_flores:             "https://gateway.pinata.cloud/ipfs/QmPENDING_LaCeja",
-  carmen_de_viboral_ceramica: "https://gateway.pinata.cloud/ipfs/QmPENDING_CarmenViboral",
-  el_retiro_cuero:            "https://gateway.pinata.cloud/ipfs/QmPENDING_ElRetiro",
-  san_antonio_pereira:        "https://gateway.pinata.cloud/ipfs/QmPENDING_SanAntonioPer",
-  marinilla_patrimonio:       "https://gateway.pinata.cloud/ipfs/QmPENDING_Marinilla",
-  guarne_campesino:           "https://gateway.pinata.cloud/ipfs/QmPENDING_Guarne",
-  santuario_refi:             "https://gateway.pinata.cloud/ipfs/QmPENDING_Santuario",
-  san_vicente_ferrer:         "https://gateway.pinata.cloud/ipfs/QmPENDING_SanVicente",
-  // 🔜 ÁREA METROPOLITANA
-  envigado_arte:              "https://gateway.pinata.cloud/ipfs/QmPENDING_Envigado",
-  medellin_centro:            "https://gateway.pinata.cloud/ipfs/QmPENDING_Medellin",
-  sabaneta_artesanal:         "https://gateway.pinata.cloud/ipfs/QmPENDING_Sabaneta",
-  caldas_tradicion:           "https://gateway.pinata.cloud/ipfs/QmPENDING_Caldas",
-  // 🔜 OCCIDENTE ANTIOQUEÑO
-  santafe_de_antioquia:       "https://gateway.pinata.cloud/ipfs/QmPENDING_SantaFe",
-};
-
-export async function POST(request: Request) {
-    try {
-        // 🛡️ Validación de Sesión con Privy
-        const authHeader = request.headers.get("authorization");
-        if (!authHeader?.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "Falta el token de autorización" }, { status: 401 });
-        }
-
-        const token = authHeader.split(" ")[1];
-        try {
-            await privy.verifyAuthToken(token);
-        } catch (error) {
-            return NextResponse.json({ error: "Token de sesión inválido" }, { status: 401 });
-        }
-
-        const { recipient, puebloId } = await request.json();
-
-        // Validación de seguridad
-        if (!recipient || !isAddress(recipient)) {
-            return NextResponse.json({ success: false, error: "Address inválida o vacía" }, { status: 400 });
-        }
-
-        const tokenURI = SELLOS_IPFS[puebloId];
-        if (!tokenURI) {
-            return NextResponse.json({ success: false, error: "Sello no encontrado" }, { status: 404 });
-        }
-
-        const privateKey = process.env.PRIVATE_KEY as `0x${string}`;
-        if (!privateKey) throw new Error("Falta PRIVATE_KEY en el servidor");
-
-        const account = privateKeyToAccount(privateKey);
-        const client = createWalletClient({
-            account,
-            chain: celo,
-            transport: http("https://forno.celo.org")
-        }).extend(publicActions);
-
-        const hash = await client.writeContract({
-            address: PASSPORT_CONTRACT.address as `0x${string}`,
-            abi: PASSPORT_CONTRACT.abi,
-            functionName: "mintMomento",
-            args: [recipient as `0x${string}`, tokenURI],
-        });
-
-        return NextResponse.json({ success: true, txHash: hash });
-    } catch (error: any) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-    }
-}
-/*import { NextResponse } from "next/server";
 import { ethers } from "ethers";
-// 🟢 Ojo: Asegúrate de que esta ruta apunte al archivo abi.ts que creamos hoy
-import { ArtesaniaABI } from "@/utils/ArtesaniaABI";
+import { PASSPORT_CONTRACT } from "@/constants/contracts";
 
-// Aquí ponemos los CIDs reales que sacaste de Pinata
+// ¡ATENCIÓN! Estos son los CIDs CORREGIDOS. Tus originales tenían un error de JSON.
 const SELLOS_IPFS: Record<string, string> = {
-    guatape_socalos: "bafkreigeqrlcc3gtrjlld7bdatruhv6uy34rfxtv4ym6ud5h6io3fdkwku",
-    sombrillas_guatape: "ipfs://bafkreiblodwup66665rxrhpkzojgrolaw5zhq3psn56wp6zaqr6lmsrxhm"
+    guatape_socalos: "ipfs://bafkreigqcbgkpmhml3zahydb7hq7gb373nhtjbssc4lko6su42l6tzrxf4",
+    sombrillas_guatape: "ipfs://bafkreiegxd63qmcetnfhryf3x7uk63ayxnezqpx7nk6zup3532dzzfznu4",
+    jardin_cafe: "ipfs://QmPENDING_Jardin",
+    santafe_de_antioquia: "ipfs://QmPENDING_SantaFe"
 };
 
 export async function POST(request: Request) {
     try {
-        // Recibimos la billetera (recipient) y el pueblo que visitó
-        const { recipient, pueblo } = await request.json();
+        const body = await request.json();
+        const recipient = body.recipient;
+        const pueblo = body.puebloId || body.pueblo; 
 
         if (!recipient || !pueblo || !SELLOS_IPFS[pueblo]) {
             return NextResponse.json({ error: "Faltan datos o pueblo inválido" }, { status: 400 });
         }
 
-        // 1. Configurar Proveedor (HARDCODEADO: Directo a Celo Alfajores)
-        const provider = new ethers.JsonRpcProvider("https://forno.celo-sepolia.celo-testnet.org");
+        // Configuración original (Directo a Celo Mainnet con fallback)
+        const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_CELO_RPC_URL || "https://forno.celo.org");
 
         if (!process.env.PRIVATE_KEY) {
             return NextResponse.json({ error: "Configuración incompleta: PRIVATE_KEY" }, { status: 500 });
@@ -117,24 +29,23 @@ export async function POST(request: Request) {
 
         const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
-        // 2. Instanciar el contrato (HARDCODEADO: Tu dirección oficial a prueba de errores)
+        const contractAddress = "0x86b6E480a423f49C4104EeAcC13c262263c24ee9"; 
         const contract = new ethers.Contract(
-            "0x86b6E480a423f49C4104EeAcC13c262263c24ee9",
-            ArtesaniaABI,
+            contractAddress,
+            PASSPORT_CONTRACT.abi,
             wallet
         );
 
-        // 3. Ejecutar el regalo (Mint) con el CID exacto del pueblo
         const tokenURI = SELLOS_IPFS[pueblo];
 
-        console.log(`Minteando sello de ${pueblo} para ${recipient}...`);
+        console.log(`Minteando sello ORIGINAL de ${pueblo} para ${recipient}...`);
         const tx = await contract.mintMomento(recipient, tokenURI);
-        const receipt = await tx.wait(); // Esperamos confirmación en la blockchain
+        const receipt = await tx.wait();
 
         return NextResponse.json({
             success: true,
             txHash: receipt.hash,
-            msg: `¡Pasaporte de ${pueblo} entregado exitosamente!`
+            msg: `¡Pasaporte original de ${pueblo} entregado exitosamente!`
         });
 
     } catch (error: any) {
@@ -144,4 +55,4 @@ export async function POST(request: Request) {
             { status: 500 }
         );
     }
-}*/
+}

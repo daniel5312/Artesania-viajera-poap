@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAccount, useSignMessage } from "wagmi";
 import { useTheme } from "@/lib/theme-context";
 import { IdentitySDK } from "@goodsdks/citizen-sdk";
-import { createPublicClient, http, stringToHex, formatUnits } from "viem";
+import { createPublicClient, http, stringToHex, formatUnits, parseAbiItem } from "viem";
 import { useUBIClaim } from "@/hooks/useUBIClaim";
 import { celo } from "viem/chains";
 import { PASSPORT_CONTRACT } from "@/constants/contracts";
@@ -22,7 +22,7 @@ import { WalletBalanceButton } from "@/components/wallet-balance-button";
 const MapaReal = dynamic(() => import("@/components/mapa"), { ssr: false });
 const publicClient = createPublicClient({
   chain: celo,
-  transport: http("https://forno.celo.org"),
+  transport: http(process.env.NEXT_PUBLIC_CELO_RPC_URL || "https://forno.celo.org"),
 });
 
 const PUEBLOS_DEMO = [
@@ -33,9 +33,12 @@ const PUEBLOS_DEMO = [
 // 📍 Traduce el hash del tokenURI al puebloId — sincronizado con comunidad-view.tsx
 // Cuando el JSON de Pinata incluya "puebloId" en la raíz, este diccionario se volverá innecesario.
 const URI_TO_PUEBLO: Record<string, string> = {
-  // ✅ ACTIVOS
+  // ✅ ACTIVOS (CORREGIDOS)
   "bafkreigqcbgkpmhml3zahydb7hq7gb373nhtjbssc4lko6su42l6tzrxf4": "guatape_socalos",
   "bafkreiegxd63qmcetnfhryf3x7uk63ayxnezqpx7nk6zup3532dzzfznu4": "sombrillas_guatape",
+  // ❌ ACTIVOS (CON ERROR DE SINTAXIS ORIGINAL)
+  "bafkreigeqrlcc3gtrjlld7bdatruhv6uy34rfxtv4ym6ud5h6io3fdkwku": "guatape_socalos",
+  "bafkreiblodwup66665rxrhpkzojgrolaw5zhq3psn56wp6zaqr6lmsrxhm": "sombrillas_guatape",
   // 🔜 ORIENTE ANTIOQUEÑO
   "QmPENDING_ElPenol":      "el_penol_piedra",
   "QmPENDING_Rionegro":     "rionegro_colonial",
@@ -143,25 +146,25 @@ export function PasaporteView({
     if (!authenticated || !walletAddress) return;
     setCargando(true);
     try {
-      const ids = Array.from({ length: 500 }, (_, i) => BigInt(i));
-      const owners = await publicClient.multicall({
-        contracts: ids.map((id) => ({
-          ...PASSPORT_CONTRACT,
-          address: PASSPORT_CONTRACT.address as `0x${string}`,
-          functionName: "ownerOf",
-          args: [id],
-        })),
-        allowFailure: true,
+      // OPTIMIZACIÓN REFI: En lugar de hacer 1500 llamadas de ownerOf, 
+      // pedimos solo el historial exacto de minteos de este usuario (1 sola llamada ligera).
+      const logs = await publicClient.getLogs({
+        address: PASSPORT_CONTRACT.address as `0x${string}`,
+        event: parseAbiItem("event MomentoMinteado(address indexed turista, uint256 indexed tokenId)"),
+        args: { turista: walletAddress as `0x${string}` },
+        fromBlock: 26000000n, // Empezamos a buscar desde un bloque reciente para ahorrar gas y tiempo de RPC
       });
 
-      const misIds = ids.filter((_, i) => {
-        if (owners[i].status !== "success") return false;
-        return (
-          (owners[i].result as string).toLowerCase() ===
-          walletAddress.toLowerCase()
-        );
-      });
+      // Extraemos los IDs únicos que este usuario ha minteado
+      const misIds = Array.from(new Set(logs.map((log) => log.args.tokenId as bigint)));
 
+      if (misIds.length === 0) {
+        setSellos([]);
+        setCargando(false);
+        return;
+      }
+
+      // Hacemos el multicall SOLO para los IDs que estamos seguros que tiene
       const uris = await publicClient.multicall({
         contracts: misIds.map((id) => ({
           ...PASSPORT_CONTRACT,
