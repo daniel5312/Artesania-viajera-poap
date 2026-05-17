@@ -15,7 +15,10 @@ import {
   Fingerprint,
   Coins,
   Stamp,
-  QrCode
+  QrCode,
+  Lock,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { WalletBalanceButton } from "@/components/wallet-balance-button";
 
@@ -25,9 +28,24 @@ const publicClient = createPublicClient({
   transport: http("https://rpc.ankr.com/celo"),
 });
 
-const PUEBLOS_DEMO = [
-  { id: "guatape_socalos", name: "Guatapé" },
-  { id: "sombrillas_guatape", name: "Sombrillas" },
+const TODOS_LOS_PUEBLOS = [
+  { id: "guatape_socalos", name: "Zócalos", isReady: true },
+  { id: "sombrillas_guatape", name: "Sombrillas", isReady: true },
+  { id: "el_penol_piedra", name: "El Peñol", isReady: false },
+  { id: "rionegro_colonial", name: "Rionegro", isReady: false },
+  { id: "la_ceja_flores", name: "La Ceja", isReady: false },
+  { id: "carmen_de_viboral_ceramica", name: "El Carmen", isReady: false },
+  { id: "el_retiro_cuero", name: "El Retiro", isReady: false },
+  { id: "san_antonio_pereira", name: "San Antonio", isReady: false },
+  { id: "marinilla_patrimonio", name: "Marinilla", isReady: false },
+  { id: "guarne_campesino", name: "Guarne", isReady: false },
+  { id: "santuario_refi", name: "Santuario", isReady: false },
+  { id: "san_vicente_ferrer", name: "San Vicente", isReady: false },
+  { id: "envigado_arte", name: "Envigado", isReady: false },
+  { id: "medellin_centro", name: "Medellín", isReady: false },
+  { id: "sabaneta_artesanal", name: "Sabaneta", isReady: false },
+  { id: "caldas_tradicion", name: "Caldas", isReady: false },
+  { id: "santafe_de_antioquia", name: "Santa Fe", isReady: false },
 ];
 
 // 📍 Traduce el hash del tokenURI al puebloId — sincronizado con comunidad-view.tsx
@@ -304,37 +322,21 @@ export function PasaporteView({
         </p>
         <div className="flex flex-wrap gap-2 justify-center">
           {([
-            { id: "guatape_socalos", name: "Zócalos", isReady: true },
-            { id: "sombrillas_guatape", name: "Sombrillas", isReady: true },
-            { id: "el_penol_piedra", name: "El Peñol", isReady: false },
-            { id: "rionegro_colonial", name: "Rionegro", isReady: false },
-            { id: "la_ceja_flores", name: "La Ceja", isReady: false },
-            { id: "carmen_de_viboral_ceramica", name: "El Carmen", isReady: false },
-            { id: "el_retiro_cuero", name: "El Retiro", isReady: false },
-            { id: "san_antonio_pereira", name: "San Antonio", isReady: false },
-            { id: "marinilla_patrimonio", name: "Marinilla", isReady: false },
-            { id: "guarne_campesino", name: "Guarne", isReady: false },
-            { id: "santuario_refi", name: "Santuario", isReady: false },
-            { id: "san_vicente_ferrer", name: "San Vicente", isReady: false },
-            { id: "envigado_arte", name: "Envigado", isReady: false },
-            { id: "medellin_centro", name: "Medellín", isReady: false },
-            { id: "sabaneta_artesanal", name: "Sabaneta", isReady: false },
-            { id: "caldas_tradicion", name: "Caldas", isReady: false },
-            { id: "santafe_de_antioquia", name: "Santa Fe", isReady: false },
+            { id: "guatape_socalos", name: "Guatapé" },
+            { id: "jardin_cafe", name: "Jardín" },
+            { id: "santafe_de_antioquia", name: "Santa Fe" },
           ]).map((p) => (
             <button
               key={p.id}
               onClick={() => handleSimularMint(p.id, p.name)}
-              disabled={simulando !== null || !p.isReady}
+              disabled={simulando !== null}
               className={`text-[9px] px-5 py-2.5 rounded-full font-black uppercase tracking-widest transition-all active:scale-95 ${
-                !p.isReady
-                  ? isDarkMode ? "bg-white/5 text-white/30 cursor-not-allowed" : "bg-black/5 text-black/30 cursor-not-allowed border border-black/10"
-                  : puebloActivo === p.name 
-                    ? isDarkMode ? "bg-[#5FF5B4] text-[#050505]" : "bg-[#0d0d0c] text-[#f2efeb]"
-                    : isDarkMode ? "bg-white/5 text-[#7a7a78]" : "bg-white text-[#6b6862] border border-[#dcd8d1]"
+                puebloActivo === p.name 
+                  ? isDarkMode ? "bg-[#5FF5B4] text-[#050505]" : "bg-[#0d0d0c] text-[#f2efeb]"
+                  : isDarkMode ? "bg-white/5 text-[#7a7a78]" : "bg-white text-[#6b6862] border border-[#dcd8d1]"
               }`}
             >
-              {simulando === p.id ? "..." : (p.isReady ? p.name : `${p.name} 🔒 Próx.`)}
+              {simulando === p.id ? "..." : p.name}
             </button>
           ))}
         </div>
@@ -343,29 +345,109 @@ export function PasaporteView({
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between px-2">
           <span className="flex items-center gap-1 text-[10px] font-black text-primary uppercase tracking-widest">
-            <Stamp size={14} /> {lang === "es" ? "Colección Principal" : "Primary Collection"}
+            <Stamp size={14} /> {lang === "es" ? "Álbum de Colección" : "Collection Album"}
           </span>
           <span className="text-[10px] font-bold opacity-50">
-            {cargando ? "..." : `${sellos.length} NFTs`}
+            {cargando ? "..." : `${sellos.length}/${TODOS_LOS_PUEBLOS.length} NFTs`}
           </span>
         </div>
         
         <div className="grid grid-cols-3 gap-3">
-          {sellos.map((s) => (
-            <div
-              key={s.id}
-              onClick={() => onStampClick(s)}
-              className="bg-card rounded-2xl overflow-hidden shadow-lg active:scale-95 cursor-pointer border border-primary/20 relative aspect-square group"
-            >
-              <img src={s.image} className="w-full h-full object-cover transition-transform group-hover:scale-105" alt="Sello" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-transparent to-transparent flex flex-col items-center justify-end p-2 pb-3">
-                <span className="text-[7px] font-black uppercase text-white truncate mb-1 opacity-80">{s.name}</span>
-                <button className="bg-primary hover:bg-primary/90 text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-full shadow-xl border border-white/20 flex items-center gap-1 w-full justify-center">
-                  📸 Álbum
-                </button>
-              </div>
-            </div>
-          ))}
+          {(() => {
+            const albumSlots = TODOS_LOS_PUEBLOS.map(pueblo => {
+              const minteado = sellos.find(s => s.puebloId === pueblo.id);
+              if (minteado) return { estado: "minteado", data: minteado, pueblo };
+              if (pueblo.isReady) return { estado: "disponible", pueblo };
+              return { estado: "bloqueado", pueblo };
+            });
+
+            const paginatedSlots = albumSlots.slice((paginaActual - 1) * itemsPorPagina, paginaActual * itemsPorPagina);
+            const totalPaginas = Math.ceil(albumSlots.length / itemsPorPagina);
+
+            return (
+              <>
+                {paginatedSlots.map((slot, index) => {
+                  if (slot.estado === "minteado") {
+                    return (
+                      <div
+                        key={slot.pueblo.id}
+                        onClick={() => onStampClick(slot.data)}
+                        className="bg-card rounded-2xl overflow-hidden shadow-lg active:scale-95 cursor-pointer border border-primary/20 relative aspect-square group"
+                      >
+                        <img src={slot.data.image} className="w-full h-full object-cover transition-transform group-hover:scale-105" alt="Sello" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-transparent to-transparent flex flex-col items-center justify-end p-2 pb-3">
+                          <span className="text-[7px] font-black uppercase text-white truncate mb-1 opacity-80">{slot.data.name}</span>
+                          <button className="bg-primary hover:bg-primary/90 text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-full shadow-xl border border-white/20 flex items-center gap-1 w-full justify-center">
+                            📸 Álbum
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (slot.estado === "disponible") {
+                    return (
+                      <div
+                        key={slot.pueblo.id}
+                        className={`rounded-2xl border-2 border-dashed aspect-square flex flex-col items-center justify-center p-2 text-center transition-all ${isDarkMode ? "bg-white/5 border-white/20 text-[#7a7a78]" : "bg-black/5 border-black/20 text-[#6b6862]"}`}
+                      >
+                        <Stamp size={20} className="opacity-30 mb-2" />
+                        <span className="text-[8px] font-black uppercase tracking-widest">{slot.pueblo.name}</span>
+                        <span className="text-[7px] font-bold mt-1 opacity-60">¡Disponible!</span>
+                        <button
+                          onClick={() => alert("Próximamente: Integración con cámara web para leer el código de tu artesanía física.")}
+                          className="mt-2 bg-primary/10 hover:bg-primary/20 text-primary text-[6px] font-black uppercase px-2 py-1.5 rounded-full transition-all flex items-center gap-1 w-full justify-center"
+                        >
+                          📷 QR Manilla
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  // Estado Bloqueado
+                  return (
+                    <div
+                      key={slot.pueblo.id}
+                      className={`rounded-2xl border border-black/5 aspect-square flex flex-col items-center justify-center p-2 text-center relative overflow-hidden ${isDarkMode ? "bg-white/5" : "bg-[#f5f3f0]"}`}
+                    >
+                      <div className="absolute inset-0 backdrop-blur-[2px] opacity-50 grayscale bg-black/10" />
+                      <Lock size={16} className="mb-2 opacity-40 text-primary z-10" />
+                      <span className="text-[7px] font-black uppercase tracking-widest opacity-40 z-10">{slot.pueblo.name}</span>
+                      <span className="text-[6px] font-bold mt-1 mb-2 opacity-40 bg-primary/10 px-2 py-0.5 rounded-full z-10 text-primary">Próximamente</span>
+                      <button
+                        onClick={() => alert("Próximamente: Integración con cámara web para leer el código de tu artesanía física.")}
+                        className={`mt-auto text-[6px] font-black uppercase px-2 py-1.5 rounded-full flex items-center gap-1 w-full justify-center z-10 border transition-all ${isDarkMode ? "bg-black/40 border-white/10 text-white/50 hover:bg-black/60" : "bg-white/50 border-black/10 text-black/50 hover:bg-white/80"}`}
+                      >
+                        📷 QR Manilla
+                      </button>
+                    </div>
+                  );
+                })}
+
+                {totalPaginas > 1 && (
+                  <div className="col-span-3 flex items-center justify-center gap-4 mt-2">
+                    <button 
+                      onClick={() => setPaginaActual(p => Math.max(1, p - 1))}
+                      disabled={paginaActual === 1}
+                      className="p-1.5 rounded-full bg-primary/10 text-primary disabled:opacity-30"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <span className="text-[9px] font-black uppercase opacity-60">
+                      {paginaActual} / {totalPaginas}
+                    </span>
+                    <button 
+                      onClick={() => setPaginaActual(p => Math.min(totalPaginas, p + 1))}
+                      disabled={paginaActual === totalPaginas}
+                      className="p-1.5 rounded-full bg-primary/10 text-primary disabled:opacity-30"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       </div>
     </div>

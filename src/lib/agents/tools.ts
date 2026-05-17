@@ -71,7 +71,7 @@ const TOKEN_ADDRESSES: { [key: string]: string } = {
 };
 
 // Direcciones de la Tesorería y Pools ReFi (Usa minúsculas para evitar errores de checksum)
-const TESORERIA_DAPP = "0x82b260d0f31bea7909a0bbb0327f1a1bb31b0575"; // Ajusta a la real
+const TESORERIA_DAPP = "0x6178B5B1447B2E48E0283cd19f0D8eEF2e7C8C1E"; // Wallet oficial de la Ruta (DApp)
 const POOL_GOODDOLLAR = "0x4016bcd00595304b7b0d366c8b6e507de7896d8b"; // Ajusta a la real
 const POOL_ARTESANIA = "0x98a19b36e2bcbc8dc69bb82ddedbc3aec8f71221"; // Ajusta a la real
 
