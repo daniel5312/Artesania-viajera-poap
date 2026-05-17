@@ -6,8 +6,6 @@ import { PASSPORT_CONTRACT } from "@/constants/contracts";
 const SELLOS_IPFS: Record<string, string> = {
     guatape_socalos: "ipfs://bafkreigqcbgkpmhml3zahydb7hq7gb373nhtjbssc4lko6su42l6tzrxf4",
     sombrillas_guatape: "ipfs://bafkreiegxd63qmcetnfhryf3x7uk63ayxnezqpx7nk6zup3532dzzfznu4",
-    jardin_cafe: "ipfs://QmPENDING_Jardin",
-    santafe_de_antioquia: "ipfs://QmPENDING_SantaFe"
 };
 
 export async function POST(request: Request) {
@@ -16,8 +14,12 @@ export async function POST(request: Request) {
         const recipient = body.recipient;
         const pueblo = body.puebloId || body.pueblo; 
 
-        if (!recipient || !pueblo || !SELLOS_IPFS[pueblo]) {
-            return NextResponse.json({ error: "Faltan datos o pueblo inválido" }, { status: 400 });
+        if (!recipient || !pueblo) {
+            return NextResponse.json({ error: "Faltan datos de la petición" }, { status: 400 });
+        }
+
+        if (!SELLOS_IPFS[pueblo]) {
+            return NextResponse.json({ error: "Sello en desarrollo. Próximamente disponible." }, { status: 400 });
         }
 
         // Configuración original (Directo a Celo Mainnet con Ankr)

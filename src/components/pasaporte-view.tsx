@@ -304,21 +304,37 @@ export function PasaporteView({
         </p>
         <div className="flex flex-wrap gap-2 justify-center">
           {([
-            { id: "guatape_socalos", name: "Guatapé" },
-            { id: "jardin_cafe", name: "Jardín" },
-            { id: "santafe_de_antioquia", name: "Santa Fe" },
+            { id: "guatape_socalos", name: "Zócalos", isReady: true },
+            { id: "sombrillas_guatape", name: "Sombrillas", isReady: true },
+            { id: "el_penol_piedra", name: "El Peñol", isReady: false },
+            { id: "rionegro_colonial", name: "Rionegro", isReady: false },
+            { id: "la_ceja_flores", name: "La Ceja", isReady: false },
+            { id: "carmen_de_viboral_ceramica", name: "El Carmen", isReady: false },
+            { id: "el_retiro_cuero", name: "El Retiro", isReady: false },
+            { id: "san_antonio_pereira", name: "San Antonio", isReady: false },
+            { id: "marinilla_patrimonio", name: "Marinilla", isReady: false },
+            { id: "guarne_campesino", name: "Guarne", isReady: false },
+            { id: "santuario_refi", name: "Santuario", isReady: false },
+            { id: "san_vicente_ferrer", name: "San Vicente", isReady: false },
+            { id: "envigado_arte", name: "Envigado", isReady: false },
+            { id: "medellin_centro", name: "Medellín", isReady: false },
+            { id: "sabaneta_artesanal", name: "Sabaneta", isReady: false },
+            { id: "caldas_tradicion", name: "Caldas", isReady: false },
+            { id: "santafe_de_antioquia", name: "Santa Fe", isReady: false },
           ]).map((p) => (
             <button
               key={p.id}
               onClick={() => handleSimularMint(p.id, p.name)}
-              disabled={simulando !== null}
+              disabled={simulando !== null || !p.isReady}
               className={`text-[9px] px-5 py-2.5 rounded-full font-black uppercase tracking-widest transition-all active:scale-95 ${
-                puebloActivo === p.name 
-                  ? isDarkMode ? "bg-[#5FF5B4] text-[#050505]" : "bg-[#0d0d0c] text-[#f2efeb]"
-                  : isDarkMode ? "bg-white/5 text-[#7a7a78]" : "bg-white text-[#6b6862] border border-[#dcd8d1]"
+                !p.isReady
+                  ? isDarkMode ? "bg-white/5 text-white/30 cursor-not-allowed" : "bg-black/5 text-black/30 cursor-not-allowed border border-black/10"
+                  : puebloActivo === p.name 
+                    ? isDarkMode ? "bg-[#5FF5B4] text-[#050505]" : "bg-[#0d0d0c] text-[#f2efeb]"
+                    : isDarkMode ? "bg-white/5 text-[#7a7a78]" : "bg-white text-[#6b6862] border border-[#dcd8d1]"
               }`}
             >
-              {simulando === p.id ? "..." : p.name}
+              {simulando === p.id ? "..." : (p.isReady ? p.name : `${p.name} 🔒 Próx.`)}
             </button>
           ))}
         </div>
