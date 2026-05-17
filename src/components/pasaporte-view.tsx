@@ -22,7 +22,7 @@ import { WalletBalanceButton } from "@/components/wallet-balance-button";
 const MapaReal = dynamic(() => import("@/components/mapa"), { ssr: false });
 const publicClient = createPublicClient({
   chain: celo,
-  transport: http(process.env.NEXT_PUBLIC_CELO_RPC_URL || "https://forno.celo.org"),
+  transport: http("https://rpc.ankr.com/celo"),
 });
 
 const PUEBLOS_DEMO = [
@@ -146,17 +146,37 @@ export function PasaporteView({
     if (!authenticated || !walletAddress) return;
     setCargando(true);
     try {
-      // OPTIMIZACIÓN REFI: En lugar de hacer 1500 llamadas de ownerOf, 
-      // pedimos solo el historial exacto de minteos de este usuario (1 sola llamada ligera).
-      const logs = await publicClient.getLogs({
-        address: PASSPORT_CONTRACT.address as `0x${string}`,
-        event: parseAbiItem("event MomentoMinteado(address indexed turista, uint256 indexed tokenId)"),
-        args: { turista: walletAddress as `0x${string}` },
-        fromBlock: 26000000n, // Empezamos a buscar desde un bloque reciente para ahorrar gas y tiempo de RPC
-      });
+      const MAX_IDS = 1500;
+      const CHUNK_SIZE = 50;
+      let misIds: bigint[] = [];
 
-      // Extraemos los IDs únicos que este usuario ha minteado
-      const misIds = Array.from(new Set(logs.map((log) => log.args.tokenId as bigint)));
+      for (let offset = 0; offset < MAX_IDS; offset += CHUNK_SIZE) {
+        const ids = Array.from({ length: CHUNK_SIZE }, (_, i) => BigInt(offset + i));
+        
+        const owners = await publicClient.multicall({
+          contracts: ids.map((id) => ({
+            ...PASSPORT_CONTRACT,
+            address: PASSPORT_CONTRACT.address as `0x${string}`,
+            functionName: "ownerOf",
+            args: [id],
+          })),
+          allowFailure: true,
+        });
+
+        let chunkHasValidTokens = false;
+        
+        const foundIds = ids.filter((id, i) => {
+          if (owners[i].status !== "success") return false;
+          chunkHasValidTokens = true;
+          return (owners[i].result as string).toLowerCase() === walletAddress.toLowerCase();
+        });
+
+        misIds.push(...foundIds);
+
+        // Si este chunk completo falló (es decir, ningún ID tiene dueño porque no han sido minteados),
+        // podemos detener el escaneo para no consultar 1500 IDs vacíos en vano.
+        if (!chunkHasValidTokens) break;
+      }
 
       if (misIds.length === 0) {
         setSellos([]);
@@ -175,36 +195,48 @@ export function PasaporteView({
         allowFailure: true,
       });
 
-      const gateway = process.env.NEXT_PUBLIC_GATEWAY_URL || "gateway.pinata.cloud";
-
       const nuevosSellos = (
         await Promise.all(
           uris.map(async (res, i) => {
             if (res.status !== "success") return null;
+            let rawUrl = res.result as string;
+            
+            // BYPASS ESTRATÉGICO: Forzamos el enrutamiento a un gateway público y gratuito
+            // sin importar si viene como ipfs:// o con dominios bloqueados de Pinata.
+            let finalUrl = rawUrl
+              .replace("ipfs://", "https://ipfs.io/ipfs/")
+              .replace("https://gateway.pinata.cloud/ipfs/", "https://ipfs.io/ipfs/")
+              .replace("https://amethyst-junior-muskox-299.mypinata.cloud/ipfs/", "https://ipfs.io/ipfs/");
+
+            let ipfsHash = rawUrl.split("/").pop() || "";
+            let derivedPuebloId = URI_TO_PUEBLO[ipfsHash] || "guatape_socalos";
+
             try {
-              const url = (res.result as string).replace(
-                "ipfs://",
-                `https://${gateway}/ipfs/`,
-              );
-              const metaRes = await fetch(url);
+              const metaRes = await fetch(finalUrl);
               const meta = await metaRes.json();
               
-              const ipfsHash = (res.result as string).split("/").pop() || "";
-              const derivedPuebloId = URI_TO_PUEBLO[ipfsHash] || "guatape_socalos";
+              let rawImage = meta.image || "";
+              const finalImage = rawImage
+                .replace("ipfs://", "https://ipfs.io/ipfs/")
+                .replace("https://gateway.pinata.cloud/ipfs/", "https://ipfs.io/ipfs/")
+                .replace("https://amethyst-junior-muskox-299.mypinata.cloud/ipfs/", "https://ipfs.io/ipfs/");
 
               return {
                 ...meta,
                 id: misIds[i].toString(),
                 puebloId: meta.puebloId || derivedPuebloId,
-                image: meta.image
-                  ?.replace("ipfs://", `https://${gateway}/ipfs/`)
-                  .replace(
-                    "https://gateway.pinata.cloud/ipfs/",
-                    `https://${gateway}/ipfs/`,
-                  ),
+                image: finalImage,
               };
-            } catch {
-              return null;
+            } catch (error) {
+              console.error(`[Pasaporte] Error al parsear metadata del ID ${misIds[i]}:`, finalUrl, error);
+              // FALLBACK: Si no es un JSON o está corrupto, asumimos que es una imagen cruda (PNG).
+              return {
+                name: `Viaje #${misIds[i].toString()}`,
+                description: "Sello Digital (Recuperado)",
+                id: misIds[i].toString(),
+                puebloId: derivedPuebloId,
+                image: finalUrl,
+              };
             }
           }),
         )

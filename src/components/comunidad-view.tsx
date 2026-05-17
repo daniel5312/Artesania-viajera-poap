@@ -16,9 +16,15 @@ const publicClient = createPublicClient({
 const IPFS_GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL || "amethyst-junior-muskox-299.mypinata.cloud";
 
 function ipfsToUrl(cid: string): string {
-  if (cid.startsWith("http")) return cid;
-  const hash = cid.replace("ipfs://", "");
-  return `https://${IPFS_GATEWAY}/ipfs/${hash}`;
+  if (!cid) return "";
+  
+  let finalUrl = cid
+    .replace("ipfs://", `https://${IPFS_GATEWAY}/ipfs/`)
+    .replace("https://gateway.pinata.cloud/ipfs/", `https://${IPFS_GATEWAY}/ipfs/`)
+    .replace("https://amethyst-junior-muskox-299.mypinata.cloud/ipfs/", `https://${IPFS_GATEWAY}/ipfs/`);
+    
+  if (finalUrl.startsWith("http")) return finalUrl;
+  return `https://${IPFS_GATEWAY}/ipfs/${cid}`;
 }
 
 // 📍 Traduce hash del tokenURI al puebloId — sincronizado con pasaporte-view.tsx

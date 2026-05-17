@@ -31,11 +31,17 @@ const publicClient = createPublicClient({
 });
 
 // Siempre usar el gateway dedicado, nunca el público (lento)
-const IPFS_GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL || "amethyst-junior-muskox-299.mypinata.cloud";
+const IPFS_GATEWAY = process.env.NEXT_PUBLIC_GATEWAY_URL || "ipfs.io";
 function ipfsToUrl(cid: string): string {
   if (!cid) return "";
-  if (cid.startsWith("http")) return cid;
-  return `https://${IPFS_GATEWAY}/ipfs/${cid.replace("ipfs://", "")}`;
+  
+  let finalUrl = cid
+    .replace("ipfs://", `https://${IPFS_GATEWAY}/ipfs/`)
+    .replace("https://gateway.pinata.cloud/ipfs/", `https://${IPFS_GATEWAY}/ipfs/`)
+    .replace("https://amethyst-junior-muskox-299.mypinata.cloud/ipfs/", `https://${IPFS_GATEWAY}/ipfs/`);
+    
+  if (finalUrl.startsWith("http")) return finalUrl;
+  return `https://${IPFS_GATEWAY}/ipfs/${cid}`;
 }
 
 const PUEBLOS = [

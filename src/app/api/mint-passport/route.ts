@@ -20,8 +20,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Faltan datos o pueblo inválido" }, { status: 400 });
         }
 
-        // Configuración original (Directo a Celo Mainnet con fallback)
-        const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_CELO_RPC_URL || "https://forno.celo.org");
+        // Configuración original (Directo a Celo Mainnet con Ankr)
+        const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_CELO_RPC_URL || "https://rpc.ankr.com/celo");
 
         if (!process.env.PRIVATE_KEY) {
             return NextResponse.json({ error: "Configuración incompleta: PRIVATE_KEY" }, { status: 500 });
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
         const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
-        const contractAddress = "0x86b6E480a423f49C4104EeAcC13c262263c24ee9"; 
+        const contractAddress = PASSPORT_CONTRACT.address as `0x${string}`;
         const contract = new ethers.Contract(
             contractAddress,
             PASSPORT_CONTRACT.abi,
