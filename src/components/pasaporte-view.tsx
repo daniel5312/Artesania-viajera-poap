@@ -323,7 +323,7 @@ export function PasaporteView({
         <div className="flex flex-wrap gap-2 justify-center">
           {([
             { id: "guatape_socalos", name: "Guatapé" },
-            { id: "jardin_cafe", name: "Jardín" },
+            { id: "sombrillas_guatape", name: "Sombrillas" },
             { id: "santafe_de_antioquia", name: "Santa Fe" },
           ]).map((p) => (
             <button
