@@ -14,6 +14,7 @@
  */
 
 import { ethers } from 'ethers';
+import { REFI_SPLITTER_ABI } from '../../constants/abis/ReFiSplitterABI';
 
 // Billetera Oficial del Agente CAJERO (IA):
 export const CAJERO_WALLET = "0xD9c10131d92f50335569a48A4b58d74f1865Da01";
@@ -64,19 +65,17 @@ export async function executeScanGeofence(args: any) {
     };
 }
 
-const ERC20_ABI = ["function transfer(address to, uint256 amount) returns (bool)"];
+const ERC20_ABI = [
+    "function transfer(address to, uint256 amount) returns (bool)",
+    "function approve(address spender, uint256 amount) returns (bool)"
+];
 const TOKEN_ADDRESSES: { [key: string]: string } = {
-    "cUSD": "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+    "CUSD": "0x765DE816845861e75A25fCA122bb6898B8B1282a",
     "USDC": "0xcebA9300f2b948710d2653dD7B07f33A8B32118C"
 };
 
-// Direcciones de la Tesorería y Pools ReFi (Usa minúsculas para evitar errores de checksum)
-const TESORERIA_DAPP = "0x6178B5B1447B2E48E0283cd19f0D8eEF2e7C8C1E"; // Wallet oficial de la Ruta (DApp)
-const POOL_GOODDOLLAR = "0x4016bcd00595304b7b0d366c8b6e507de7896d8b"; // Ajusta a la real
-const POOL_ARTESANIA = "0x98a19b36e2bcbc8dc69bb82ddedbc3aec8f71221"; // Ajusta a la real
-
 export async function executePaymentRouting(args: any) {
-    console.log(`[CAJERO-AGENT: ${CAJERO_WALLET}] 💸 Iniciando enrutamiento de pago REAL (x402)...`, args);
+    console.log(`[CAJERO-AGENT: ${CAJERO_WALLET}] 💸 Iniciando enrutamiento de pago UNIFICADO (x402)...`, args);
     
     const montoBase = parseFloat(args.monto);
     const splitArtesano = montoBase * 0.90;
@@ -84,7 +83,7 @@ export async function executePaymentRouting(args: any) {
     const splitPoolGD = montoBase * 0.025;
     const splitPoolArtesania = montoBase * 0.025;
 
-    console.log(`[CAJERO-AGENT] 🧮 Distribución calculada:
+    console.log(`[CAJERO-AGENT] 🧮 Distribución a enrutar vía Smart Contract:
     - Artesano (${args.artesanoAddress}): ${splitArtesano.toFixed(4)} ${args.token}
     - Tesorería DApp: ${splitDapp.toFixed(4)} ${args.token}
     - Pool GoodDollar: ${splitPoolGD.toFixed(4)} ${args.token}
@@ -93,63 +92,60 @@ export async function executePaymentRouting(args: any) {
 
     try {
         const privateKey = process.env.AGENT_PRIVATE_KEY;
-        if (!privateKey) throw new Error("AGENT_PRIVATE_KEY no configurada en el servidor.");
+        const splitterAddress = process.env.NEXT_PUBLIC_REFI_SPLITTER_ADDRESS;
+        
+        if (!privateKey) throw new Error("AGENT_PRIVATE_KEY no configurada.");
+        if (!splitterAddress) throw new Error("NEXT_PUBLIC_REFI_SPLITTER_ADDRESS no configurada.");
 
         const provider = new ethers.JsonRpcProvider("https://forno.celo.org");
         const wallet = new ethers.Wallet(privateKey, provider);
         const tokenUpper = args.token.toUpperCase();
 
         let txHashes = [];
-        
-        // Obtener el Nonce actual para poder enviar 4 transacciones seguidas sin chocar
         let currentNonce = await wallet.getNonce();
+        
+        const splitterContract = new ethers.Contract(splitterAddress, REFI_SPLITTER_ABI, wallet);
 
-        // Función auxiliar para enviar
-        const enviarPago = async (destino: string, cantidad: number) => {
-            if (cantidad <= 0) return null;
+        if (tokenUpper === "CELO") {
+            console.log("⏳ Enviando transacción ÚNICA y ATÓMICA al ReFi Splitter (CELO Nativo)...");
+            const cantidadStr = montoBase.toFixed(18);
             
-            const nonceToUse = currentNonce++; // Usar y luego incrementar
-            
-            if (tokenUpper === "CELO") {
-                // CELO tiene 18 decimales. toFixed(18) evita errores de coma flotante de JS
-                const cantidadStr = cantidad.toFixed(18);
-                const tx = await wallet.sendTransaction({
-                    to: destino,
-                    value: ethers.parseEther(cantidadStr),
-                    nonce: nonceToUse
-                });
-                return tx.hash;
-            } else if (TOKEN_ADDRESSES[tokenUpper]) {
-                const contract = new ethers.Contract(TOKEN_ADDRESSES[tokenUpper], ERC20_ABI, wallet);
-                const decimals = tokenUpper === "USDC" ? 6 : 18;
-                // Redondear la cantidad a los decimales exactos del token para evitar NUMERIC_FAULT
-                const cantidadStr = cantidad.toFixed(decimals);
-                const tx = await contract.transfer(destino, ethers.parseUnits(cantidadStr, decimals), { nonce: nonceToUse });
-                return tx.hash;
-            } else {
-                throw new Error(`Token no soportado: ${tokenUpper}`);
-            }
-        };
+            const tx = await splitterContract.comprarArtesania(args.artesanoAddress, {
+                value: ethers.parseEther(cantidadStr),
+                nonce: currentNonce
+            });
+            txHashes.push(tx.hash);
 
-        console.log("⏳ Enviando transacción 1/4 (Artesano)...");
-        const tx1 = await enviarPago(args.artesanoAddress, splitArtesano);
-        if(tx1) txHashes.push(tx1);
+        } else if (TOKEN_ADDRESSES[tokenUpper]) {
+            const tokenContract = new ethers.Contract(TOKEN_ADDRESSES[tokenUpper], ERC20_ABI, wallet);
+            const decimals = tokenUpper === "USDC" ? 6 : 18;
+            const cantidadStr = montoBase.toFixed(decimals);
+            const amountToSend = ethers.parseUnits(cantidadStr, decimals);
 
-        console.log("⏳ Enviando transacción 2/4 (Tesorería DApp)...");
-        const tx2 = await enviarPago(TESORERIA_DAPP, splitDapp);
-        if(tx2) txHashes.push(tx2);
+            console.log(`⏳ Aprobando fondos de ${tokenUpper} para el Splitter...`);
+            const txApprove = await tokenContract.approve(splitterAddress, amountToSend, {
+                nonce: currentNonce++
+            });
+            txHashes.push(txApprove.hash);
+            await txApprove.wait(); // Confirmar el Approve antes del TransferFrom
 
-        console.log("⏳ Enviando transacción 3/4 (Pool GoodDollar)...");
-        const tx3 = await enviarPago(POOL_GOODDOLLAR, splitPoolGD);
-        if(tx3) txHashes.push(tx3);
-
-        console.log("⏳ Enviando transacción 4/4 (Pool Artesanía)...");
-        const tx4 = await enviarPago(POOL_ARTESANIA, splitPoolArtesania);
-        if(tx4) txHashes.push(tx4);
+            console.log("⏳ Ejecutando Split Unificado (ERC-20)...");
+            const txTransfer = await splitterContract.comprarArtesaniaERC20(
+                TOKEN_ADDRESSES[tokenUpper], 
+                args.artesanoAddress, 
+                amountToSend, 
+                {
+                    nonce: currentNonce
+                }
+            );
+            txHashes.push(txTransfer.hash);
+        } else {
+            throw new Error(`Token no soportado: ${tokenUpper}`);
+        }
 
         return {
             success: true,
-            simulation: false, // ¡ES REAL!
+            simulation: false, // ¡TRANSACCIONES REALES!
             standard: "x402",
             agentWallet: CAJERO_WALLET,
             txHashes,
@@ -163,10 +159,10 @@ export async function executePaymentRouting(args: any) {
         };
 
     } catch (error: any) {
-        console.error("❌ Error en el pago On-Chain:", error.message);
+        console.error("❌ Error en el pago On-Chain Unificado:", error.message);
         return {
             success: false,
-            message: `El agente intentó enviar el pago on-chain pero falló: ${error.message}. (Verifica que la wallet del Agente CAJERO tenga fondos suficientes de gas y tokens).`
+            message: `Fallo en la Inteligencia del Agente: ${error.message}`
         };
     }
 }

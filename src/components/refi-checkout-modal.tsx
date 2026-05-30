@@ -217,11 +217,25 @@ export function ReFiCheckoutModal({ isOpen, onClose, product, onSuccess, isMiniP
           {onchainData && (
             <div className="mt-4 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 animate-in slide-in-from-bottom-4 fade-in duration-300">
               <div className="flex flex-col items-center text-center mb-4">
-                <CheckCircle size={24} className="text-emerald-400 mb-2" />
-                <h3 className="text-sm font-black uppercase tracking-tight text-white">¡Ejecución CAJERO Exitosa!</h3>
+                {onchainData.success === false ? (
+                  <>
+                    <AlertCircle size={24} className="text-red-400 mb-2" />
+                    <h3 className="text-sm font-black uppercase tracking-tight text-red-500">¡Fallo en el Cajero!</h3>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle size={24} className="text-emerald-400 mb-2" />
+                    <h3 className="text-sm font-black uppercase tracking-tight text-white">¡Ejecución CAJERO Exitosa!</h3>
+                  </>
+                )}
               </div>
               
               <div className="space-y-3">
+                {onchainData.success === false && onchainData.message && (
+                  <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded-xl text-[10px] font-bold">
+                    {onchainData.message}
+                  </div>
+                )}
                 {onchainData.splits && (
                   <>
                     <h4 className="text-[9px] text-white/50 uppercase tracking-widest flex items-center gap-2">

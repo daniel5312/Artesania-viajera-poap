@@ -63,13 +63,20 @@ export function AgentNotifications() {
             <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mb-4 text-emerald-400 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.3)]">
               <CheckCircle2 size={32} />
             </div>
-            <h2 className="text-xl font-black uppercase tracking-tight text-white">¡Pago Ejecutado!</h2>
+            <h2 className={`text-xl font-black uppercase tracking-tight ${onchainData.success === false ? "text-red-500" : "text-white"}`}>
+              {onchainData.success === false ? "¡Fallo en el Pago!" : "¡Pago Ejecutado!"}
+            </h2>
             <p className="text-xs font-bold uppercase tracking-widest mt-1 text-emerald-400">
               Agente Autónomo CAJERO
             </p>
           </div>
 
           <div className="space-y-4">
+            {onchainData.success === false && onchainData.message && (
+              <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-xl text-xs font-bold">
+                {onchainData.message}
+              </div>
+            )}
             {onchainData.splits && (
               <div className="bg-black/40 rounded-2xl border border-white/5 p-4">
                 <h4 className="text-[10px] text-white/50 uppercase tracking-widest mb-3 flex items-center gap-2">
