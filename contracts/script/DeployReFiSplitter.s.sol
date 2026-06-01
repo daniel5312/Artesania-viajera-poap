@@ -5,28 +5,37 @@ import {BaseScript} from "./Base.s.sol";
 import {ReFiSplitter} from "../src/ReFiSplitter.sol";
 import {console} from "forge-std/console.sol";
 
+/**
+ * @title Script de Despliegue Unificado (Artesanía Viajera)
+ * @dev [BLOCKCHAIN] Este script automatiza la inyección del contrato en Celo Mainnet.
+ * Arquitectura Híbrida: Soporta G$ (Smart Contracts) y CELO/USDT (EOAs) en un solo contrato.
+ */
 contract DeployReFiSplitter is BaseScript {
     function run() external broadcast {
-        // 1. Tesorería de la Ruta (La DApp, recibe el 5%)
-        // Dirección fija de tesorería Artesanía Viajera
-        address treasuryPool = 0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b;
-
-        // 2. GoodPools Iniciales (El otro 5% se divide entre estos 2 pools, es decir 2.5% cada uno)
-        address[] memory initialPools = new address[](2);
-        // Pool 1: GoodDollar UBI+ for Women – Colombia
-        initialPools[0] = 0x0d43131f1577310D6349bAF9D6Da4fC1Cd39764C; 
-        // Pool 2: GoodDollar UBI+ for Women – Nigeria
-        initialPools[1] = 0xDd1c12f197E6D1E2FBA15487AaAE500eF6e07BCA; 
-
-        // 3. Despliegue del Nuevo Contrato Único
-        ReFiSplitter splitter = new ReFiSplitter(treasuryPool, initialPools);
         
-        console.log("-----------------------------------------");
-        console.log("ReFi Splitter (UNIFICADO) deployed to:", address(splitter));
-        console.log("Treasury DApp (5%):", treasuryPool);
-        console.log("GoodPool 1 (2.5%):", initialPools[0]);
-        console.log("GoodPool 2 (2.5%):", initialPools[1]);
-        console.log("-----------------------------------------");
-        console.log("ACTUALIZA TU .env.local y constantes con esta unica direccion!");
+        // [REFI] 1. Tesorería DApp (Recibe 5%)
+        address treasuryPool = 0x6178B5B1447B2E48E0283cd19f0D8eEF2e7C8C1E;
+
+        // [REFI] 2. Pools Exclusivos para G$ (Contratos de GoodDollar) (Reciben 5% dividido)
+        address[] memory gdPools = new address[](2);
+        gdPools[0] = 0x4016bcD00595304b7B0d366c8B6e507De7896D8B; 
+        gdPools[1] = 0x98a19b36E2bCbC8DC69BB82ddedBc3AEc8f71221; 
+
+        // [REFI] 3. Pools para CELO / USDT (Billeteras de Cripto Nativas) (Reciben 5% dividido)
+        address[] memory cryptoPools = new address[](2);
+        // Tesorería pool artesanos (2.5%)
+        cryptoPools[0] = 0x6178B5B1447B2E48E0283cd19f0D8eEF2e7C8C1E;
+        // Wallet auto-fondeo gas (2.5%)
+        cryptoPools[1] = 0x9158C35f1a054F25f9D45EA47107D54a2ea25945;
+
+        // [CELO] 4. Instanciamos el contrato y lo enviamos a la red.
+        ReFiSplitter splitter = new ReFiSplitter(treasuryPool, gdPools, cryptoPools);
+        
+        // [BLOCKCHAIN] Mostramos la dirección final en la terminal de forma clara.
+        console.log("---------------------------------------------------------");
+        console.log(unicode"✅ ReFi Splitter (ARQUITECTURA DUAL) desplegado con exito!");
+        console.log(unicode"👉 DIRECCION DEL SMART CONTRACT:");
+        console.log(address(splitter));
+        console.log("---------------------------------------------------------");
     }
 }

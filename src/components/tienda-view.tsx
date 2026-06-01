@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import {
   useSendTransaction,
@@ -26,7 +26,11 @@ import { useAgent } from "@/lib/agent-context";
 const G_DOLLAR_ADDRESS = "0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A";
 const USDT_ADDRESS = "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e"; // Dirección correcta de USDT nativo en Celo Mainnet
 
-const publicClient = createPublicClient({ chain: celo, transport: http("https://forno.celo.org") });
+const publicClient = createPublicClient({ chain: celo, transport: http("https://rpc.ankr.com/celo") });
+
+// 🏦 Treasury Splitter (viejo) — Solo para CELO nativo.
+// Pool B = wallet EOA de la DApp. No toca los pools de GoodCollective que rechazan CELO nativo.
+const TREASURY_SPLITTER_ADDRESS = "0x8ab653440cef8f4fcf4780b2835f0265b6431392" as const;
 
 const erc20Abi = [
   {
@@ -59,7 +63,7 @@ const NFT_PRODUCTS = [
     price: "0.05",
     puebloId: "guatape_socalos",
     img: "/images/community-1.jpg",
-    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
+    wallet: "0xCb5685779DC289b96F71921E30FFeB18d909F6ED",
     type: "sellos",
   },
   {
@@ -69,7 +73,7 @@ const NFT_PRODUCTS = [
     price: "0.05",
     puebloId: "sombrillas_guatape",
     img: "/images/community-2.jpg",
-    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
+    wallet: "0xCb5685779DC289b96F71921E30FFeB18d909F6ED",
     type: "sellos",
   },
   {
@@ -79,7 +83,7 @@ const NFT_PRODUCTS = [
     price: "0.08",
     puebloId: "jardin_cafe",
     img: "/images/product-manilla.jpg",
-    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
+    wallet: "0xCb5685779DC289b96F71921E30FFeB18d909F6ED",
     type: "artesanias",
   },
   {
@@ -89,7 +93,7 @@ const NFT_PRODUCTS = [
     price: "0.05",
     puebloId: "envigado_verde",
     img: "/images/product-sombrero.jpg",
-    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
+    wallet: "0xCb5685779DC289b96F71921E30FFeB18d909F6ED",
     type: "sellos",
   },
   {
@@ -99,7 +103,7 @@ const NFT_PRODUCTS = [
     price: "0.01",
     puebloId: "jerico_cuero",
     img: "/images/product-mochila.jpg",
-    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
+    wallet: "0xCb5685779DC289b96F71921E30FFeB18d909F6ED",
     type: "artesanias",
   },
   {
@@ -109,7 +113,7 @@ const NFT_PRODUCTS = [
     price: "0.02",
     puebloId: "mompox_filigrana",
     img: "/images/stamp-guatape.jpg",
-    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
+    wallet: "0xCb5685779DC289b96F71921E30FFeB18d909F6ED",
     type: "artesanias",
   },
   {
@@ -119,7 +123,7 @@ const NFT_PRODUCTS = [
     price: "0.05",
     puebloId: "el_carmen_ceramica",
     img: "/images/community-1.jpg",
-    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
+    wallet: "0xCb5685779DC289b96F71921E30FFeB18d909F6ED",
     type: "artesanias",
   },
   {
@@ -129,7 +133,7 @@ const NFT_PRODUCTS = [
     price: "0.08",
     puebloId: "biota_line",
     img: "/images/product-mochila.jpg",
-    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
+    wallet: "0xCb5685779DC289b96F71921E30FFeB18d909F6ED",
     type: "artesanias",
   },
 ];
@@ -274,8 +278,9 @@ export function TiendaView({ onNavigate }: { onNavigate?: (tab: any) => void } =
         console.log("Ya en Celo Mainnet o usuario canceló switch");
       }
 
-      // [REFI] Logic: Cálculos de impacto y enrutamiento dual
-      const targetContractAddress = REFI_SPLITTER_CONTRACT.address;
+      // [REFI] CELO nativo → Treasury Splitter viejo (Pool B = EOA, acepta CELO)
+      // Los pools de GoodCollective NO aceptan CELO nativo, por eso usamos el splitter separado.
+      const targetContractAddress = TREASURY_SPLITTER_ADDRESS;
 
       // [CELO] Transaction: Llamadas a la red.
       const tx = await writeContractAsync({
@@ -543,14 +548,14 @@ export function TiendaView({ onNavigate }: { onNavigate?: (tab: any) => void } =
                       { label: "USDT", fn: () => handlePayERC20(nft, USDT_ADDRESS, 6) },
                       { label: "CELO", fn: () => handlePayCelo(nft) },
                     ].map(({ label, fn }, i) => (
-                      <>
-                        {i > 0 && <div key={`sep-${label}`} className={`w-px h-3 ${isDarkMode ? "bg-[#242422]" : "bg-[#e2e1de]"}`} />}
-                        <button key={label} onClick={fn}
+                      <React.Fragment key={label}>
+                        {i > 0 && <div className={`w-px h-3 ${isDarkMode ? "bg-[#242422]" : "bg-[#e2e1de]"}`} />}
+                        <button onClick={fn}
                           disabled={paying !== null || isConfirmingPayment}
                           className={`text-[8px] font-black uppercase tracking-wider transition-opacity disabled:opacity-40 ${N.muted} hover:${N.mint}`}>
                           {paying === nft.id ? "…" : label}
                         </button>
-                      </>
+                      </React.Fragment>
                     ))}
                   </div>
                 </>

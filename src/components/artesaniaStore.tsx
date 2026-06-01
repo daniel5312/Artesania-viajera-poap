@@ -31,7 +31,7 @@ const PRODUCTS = [
   },
 ];
 
-const MERCHANT_WALLET = "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b";
+const MERCHANT_WALLET = "0xCb5685779DC289b96F71921E30FFeB18d909F6ED";
 
 export default function ArtesaniaStore() {
   const { authenticated, login } = usePrivy();
