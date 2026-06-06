@@ -65,6 +65,12 @@ export async function executeScanGeofence(args: any) {
 }
 
 const ERC20_ABI = ["function transfer(address to, uint256 amount) returns (bool)"];
+
+const REPUTATION_REGISTRY_ABI = [
+    "function giveFeedback(uint256 agentId, int128 value, uint8 valueDecimals, bytes32 tag1, bytes32 tag2, string endpoint, string feedbackURI, bytes32 feedbackHash) external"
+];
+const REPUTATION_REGISTRY_ADDRESS = "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63"; // Celo Mainnet
+
 const TOKEN_ADDRESSES: { [key: string]: string } = {
     "cUSD": "0x765DE816845861e75A25fCA122bb6898B8B1282a",
     "USDC": "0xcebA9300f2b948710d2653dD7B07f33A8B32118C"
@@ -146,6 +152,34 @@ export async function executePaymentRouting(args: any) {
         console.log("⏳ Enviando transacción 4/4 (Pool Artesanía)...");
         const tx4 = await enviarPago(POOL_ARTESANIA, splitPoolArtesania);
         if(tx4) txHashes.push(tx4);
+
+        // =========================================================
+        // 🌟 ERC-8004 FEEDBACK (Activar el agente en 8004scan)
+        // =========================================================
+        try {
+            console.log("🌟 Emitiendo Feedback ERC-8004 para el Agente...");
+            const dAppPrivateKey = process.env.PRIVATE_KEY;
+            if (dAppPrivateKey) {
+                const dAppWallet = new ethers.Wallet(dAppPrivateKey, provider);
+                const reputationContract = new ethers.Contract(REPUTATION_REGISTRY_ADDRESS, REPUTATION_REGISTRY_ABI, dAppWallet);
+                
+                const agentId = 9059;
+                const value = 100n; // 100 puntos
+                const valueDecimals = 0;
+                const tag1 = ethers.encodeBytes32String("successRate");
+                const tag2 = ethers.ZeroHash;
+                const endpoint = "https://artesania-viajera.vercel.app/api/chat";
+                const feedbackURI = "ipfs://bafybeigdx2hthp6y6vptd2fblz324euyv276u3euygndp2z2xcd243j6tq/feedback.json";
+                const feedbackHash = ethers.ZeroHash;
+
+                const feedbackTx = await reputationContract.giveFeedback(agentId, value, valueDecimals, tag1, tag2, endpoint, feedbackURI, feedbackHash, { gasLimit: 500000 });
+                console.log(`✅ Feedback de 5 estrellas enviado al Agente 9059. Hash: ${feedbackTx.hash}`);
+            } else {
+                console.warn("⚠️ No se encontró PRIVATE_KEY en .env.local para emitir Feedback ERC-8004.");
+            }
+        } catch (feedbackErr: any) {
+            console.error("❌ Error enviando Feedback ERC-8004:", feedbackErr.message);
+        }
 
         return {
             success: true,
