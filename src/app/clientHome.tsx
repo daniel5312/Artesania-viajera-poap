@@ -8,28 +8,44 @@ import { Loader2 } from "lucide-react";
 
 // Componentes del nuevo diseño
 import { ThemeProvider, useTheme } from "@/lib/theme-context";
+import { useGlobal } from "@/lib/global-context";
 import { WalletHeader } from "@/components/wallet-header";
 import { BottomNav } from "@/components/bottom-nav";
 import { PasaporteView } from "@/components/pasaporte-view";
 import { TiendaView } from "@/components/tienda-view";
 import { ComunidadView } from "@/components/comunidad-view";
 import { MomentosView } from "@/components/momentos-view";
+import { CollectionView } from "@/components/collection-view";
+import { DashboardWalletView } from "@/components/dashboard-wallet-view";
+import { ImpactDashboard } from "@/components/impact-dashboard";
 import FarcasterLoader from "@/components/farcasterLoader";
 
-type Tab = "pasaporte" | "tienda" | "comunidad" | "momentos";
+type Tab = "pasaporte" | "tienda" | "comunidad" | "momentos" | "coleccion" | "dashboard" | "impacto";
 
 function AppShell() {
-  const { login, authenticated, user } = usePrivy();
+  const { login, authenticated } = usePrivy();
   const { wallets } = useWallets();
   const searchParams = useSearchParams();
   const router = useRouter();
 
   // Traemos el contexto del nuevo tema
   const { isDarkMode } = useTheme();
+  const { userRole } = useGlobal();
 
   const [mounted, setMounted] = useState(false);
   const [isAutoMinting, setIsAutoMinting] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>("pasaporte");
+  
+  // Si es artesano, el home es el dashboard. Si es turista, el pasaporte.
+  const [activeTab, setActiveTab] = useState<Tab>(userRole === "artesano" ? "dashboard" : "pasaporte");
+
+  // Efecto para actualizar la pestaña si el rol cambia después del montaje
+  useEffect(() => {
+    if (userRole === "artesano" && activeTab !== "dashboard" && activeTab !== "impacto" && activeTab !== "comunidad") {
+      setActiveTab("dashboard");
+    } else if (userRole === "turista" && activeTab !== "pasaporte" && activeTab !== "tienda" && activeTab !== "momentos" && activeTab !== "comunidad" && activeTab !== "coleccion") {
+      setActiveTab("pasaporte");
+    }
+  }, [userRole]);
 
   const selloPendiente = searchParams.get("sello");
 
@@ -126,9 +142,12 @@ function AppShell() {
             }}
           />
         )}
-        {activeTab === "tienda" && <TiendaView />}
+        {activeTab === "tienda" && <TiendaView onNavigate={setActiveTab} />}
+        {activeTab === "coleccion" && <CollectionView />}
         {activeTab === "momentos" && <MomentosView selectedSello={undefined} />}
         {activeTab === "comunidad" && <ComunidadView />}
+        {activeTab === "dashboard" && <DashboardWalletView onNavigate={setActiveTab} />}
+        {activeTab === "impacto" && <ImpactDashboard />}
       </main>
 
       {/* NAVEGACIÓN INFERIOR ESTILO APP */}

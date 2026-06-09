@@ -63,7 +63,7 @@ const NFT_PRODUCTS = [
     price: "0.05",
     puebloId: "guatape_socalos",
     img: "/images/community-1.jpg",
-    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
+    wallet: "0x6178B5B1447B2E48E0283cd19f0D8eEF2e7C8C1E", // Artesano A
     type: "sellos",
   },
   {
@@ -73,7 +73,7 @@ const NFT_PRODUCTS = [
     price: "0.05",
     puebloId: "sombrillas_guatape",
     img: "/images/community-2.jpg",
-    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
+    wallet: "0x1f90a029013609246573f8B3519C8e352333AB0C", // Artesano B
     type: "sellos",
   },
   {
@@ -83,7 +83,7 @@ const NFT_PRODUCTS = [
     price: "0.08",
     puebloId: "jardin_cafe",
     img: "/images/product-manilla.jpg",
-    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
+    wallet: "0x9158C35f1a054F25f9D45EA47107D54a2ea25945", // Artesano X
     type: "artesanias",
   },
   {
@@ -93,7 +93,7 @@ const NFT_PRODUCTS = [
     price: "0.05",
     puebloId: "envigado_verde",
     img: "/images/product-sombrero.jpg",
-    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
+    wallet: "0x9bc43f955ce11948e4fD6EAC28d46875Fba9f5F9", // Artesano Y
     type: "sellos",
   },
   {
@@ -103,7 +103,7 @@ const NFT_PRODUCTS = [
     price: "0.01",
     puebloId: "jerico_cuero",
     img: "/images/product-mochila.jpg",
-    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
+    wallet: "0x6178B5B1447B2E48E0283cd19f0D8eEF2e7C8C1E", // Artesano A
     type: "artesanias",
   },
   {
@@ -113,7 +113,7 @@ const NFT_PRODUCTS = [
     price: "0.02",
     puebloId: "mompox_filigrana",
     img: "/images/stamp-guatape.jpg",
-    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
+    wallet: "0x1f90a029013609246573f8B3519C8e352333AB0C", // Artesano B
     type: "artesanias",
   },
   {
@@ -123,7 +123,7 @@ const NFT_PRODUCTS = [
     price: "0.05",
     puebloId: "el_carmen_ceramica",
     img: "/images/community-1.jpg",
-    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
+    wallet: "0x9158C35f1a054F25f9D45EA47107D54a2ea25945", // Artesano X
     type: "artesanias",
   },
   {
@@ -133,7 +133,7 @@ const NFT_PRODUCTS = [
     price: "0.08",
     puebloId: "biota_line",
     img: "/images/product-mochila.jpg",
-    wallet: "0x6D4763715bf9cDe401FD4AaC9a6254CeB4382c9b",
+    wallet: "0x9bc43f955ce11948e4fD6EAC28d46875Fba9f5F9", // Artesano Y
     type: "artesanias",
   },
 ];

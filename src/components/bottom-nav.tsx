@@ -2,6 +2,7 @@
 
 import { Fingerprint, ShoppingBag, Users, Sparkles, Box, Wallet, TrendingUp } from "lucide-react"
 import { useTheme } from "@/lib/theme-context"
+import { useGlobal } from "@/lib/global-context"
 import { t } from "@/lib/i18n"
 
 type Tab = "pasaporte" | "tienda" | "comunidad" | "momentos" | "coleccion" | "dashboard" | "impacto"
@@ -11,17 +12,25 @@ interface BottomNavProps {
   onTabChange: (tab: Tab) => void
 }
 
-const tabs: { id: Tab; labelKey: string; icon: any }[] = [
+const tabsTurista: { id: Tab; labelKey: string; icon: any }[] = [
   { id: "pasaporte", labelKey: "nav.pasaporte", icon: Fingerprint },
   { id: "coleccion", labelKey: "nav.coleccion", icon: Box },
   { id: "tienda", labelKey: "nav.tienda", icon: ShoppingBag },
   { id: "momentos", labelKey: "nav.momentos", icon: Sparkles },
   { id: "comunidad", labelKey: "nav.comunidad", icon: Users },
-  { id: "impacto", labelKey: "Impacto", icon: TrendingUp },
+]
+
+const tabsArtesano: { id: Tab; labelKey: string; icon: any }[] = [
+  { id: "dashboard", labelKey: "Dashboard", icon: Wallet },
+  { id: "impacto", labelKey: "Impacto ReFi", icon: TrendingUp },
+  { id: "comunidad", labelKey: "nav.comunidad", icon: Users },
 ]
 
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const { isDarkMode, lang } = useTheme()
+  const { userRole } = useGlobal()
+  
+  const tabs = userRole === "artesano" ? tabsArtesano : tabsTurista
 
   return (
     <nav
@@ -42,7 +51,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
               key={tab.id}
               role="tab"
               aria-selected={isActive}
-              aria-label={t(lang, tab.labelKey)}
+              aria-label={t(lang, tab.labelKey) || tab.labelKey}
               onClick={() => onTabChange(tab.id)}
               className={`flex flex-col items-center gap-0.5 rounded-2xl px-4 py-2 transition-all ${
                 isActive
@@ -51,7 +60,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
               }`}
             >
               <Icon className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : ""}`} />
-              <span className="text-[10px] font-medium">{t(lang, tab.labelKey)}</span>
+              <span className="text-[10px] font-medium">{t(lang, tab.labelKey) || tab.labelKey}</span>
             </button>
           )
         })}
