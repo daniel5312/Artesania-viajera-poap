@@ -63,7 +63,7 @@ const NFT_PRODUCTS = [
     price: "0.05",
     puebloId: "guatape_socalos",
     img: "/images/community-1.jpg",
-    wallet: "0x6178B5B1447B2E48E0283cd19f0D8eEF2e7C8C1E", // Artesano A
+    wallet: "0xCb5685779DC289b96F71921E30FFeB18d909F6ED", // Artesano A
     type: "sellos",
   },
   {
@@ -103,7 +103,7 @@ const NFT_PRODUCTS = [
     price: "0.01",
     puebloId: "jerico_cuero",
     img: "/images/product-mochila.jpg",
-    wallet: "0x6178B5B1447B2E48E0283cd19f0D8eEF2e7C8C1E", // Artesano A
+    wallet: "0xCb5685779DC289b96F71921E30FFeB18d909F6ED", // Artesano A
     type: "artesanias",
   },
   {
