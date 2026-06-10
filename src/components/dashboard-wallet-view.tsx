@@ -148,6 +148,18 @@ function GoodWalletSection({ walletAAddress, isDark: d }: { walletAAddress: stri
         )}
       </div>
 
+      {!walletB && (
+        <div className="mt-2 text-center">
+          <p className={`text-[10px] mb-3 ${S.muted(d)}`}>
+            Conecta tu GoodWallet para reclamar UBI diario y activar el goteo de Superfluid.
+          </p>
+          <a href="https://wallet.gooddollar.org" target="_blank" rel="noopener noreferrer"
+             className={`inline-flex items-center justify-center w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-[#00c27b]/30 text-[#00c27b] hover:bg-[#00c27b]/10 transition-colors`}>
+            👤 Crear GoodWallet (Verificación Facial)
+          </a>
+        </div>
+      )}
+
       {walletB && (
         <div className="flex flex-col gap-3">
           <p className={`text-[9px] font-mono truncate ${S.muted(d)}`}>{walletB}</p>
@@ -251,6 +263,14 @@ function TouristView({ walletAAddress, walletABalances, gDollarFormatted, onNavi
 // ═══════════════════════════════════════════════════════════════════════════
 // ARTISAN VIEW
 // ═══════════════════════════════════════════════════════════════════════════
+
+const ARTISAN_PUEBLO_MAP: Record<string, string> = {
+  "0xcb5685779dc289b96f71921e30ffeb18d909f6ed": "guatape_socalos",
+  "0x1f90a029013609246573f8b3519c8e352333ab0c": "sombrillas_guatape",
+  "0x9158c35f1a054f25f9d45ea47107d54a2ea25945": "el_carmen_ceramica",
+  "0x9bc43f955ce11948e4fd6eac28d46875fba9f5f9": "biota_line"
+};
+
 function ArtisanView({ walletAAddress, walletABalances, gDollarFormatted }: {
   walletAAddress: string | undefined;
   walletABalances: ReturnType<typeof useWalletABalances>;
@@ -259,8 +279,26 @@ function ArtisanView({ walletAAddress, walletABalances, gDollarFormatted }: {
   const { isDarkMode: d } = useTheme();
   const metrics = useArtisanMetrics(walletAAddress);
 
+  const puebloId = walletAAddress ? ARTISAN_PUEBLO_MAP[walletAAddress.toLowerCase()] : null;
+  const qrUrl = puebloId ? `https://artesania-viajera.vercel.app/?sello=${puebloId}` : "";
+  const qrImgSrc = qrUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrUrl)}&color=${d ? "5FF5B4" : "000000"}&bgcolor=${d ? "0d0d0d" : "ffffff"}` : "";
+
   return (
     <div className="flex flex-col gap-3">
+      {/* 🎁 REGALAR SELLO (FÍSICO) */}
+      {puebloId && (
+        <section className={`p-5 relative overflow-hidden flex flex-col items-center text-center ${S.card(d)}`}>
+          <span className={S.sectionLabel(d)}><Stamp size={12} /> Sello para tus Turistas</span>
+          <p className={`text-[10px] mb-4 ${S.muted(d)}`}>
+            Cuando un turista te compre en físico, dile que escanee este código para regalarle el NFT exclusivo de tu pueblo.
+          </p>
+          <div className="p-3 bg-white rounded-2xl shadow-lg border border-border/20">
+            <img src={qrImgSrc} alt="QR para Regalar NFT" className="w-48 h-48 rounded-xl object-contain" />
+          </div>
+          <span className={`text-[8px] font-mono mt-4 px-3 py-1 rounded-full ${S.ghost(d)}`}>Sello: {puebloId}</span>
+        </section>
+      )}
+
       <section className={`p-5 relative overflow-hidden ${S.card(d)}`}>
         {d && <div className="pointer-events-none absolute -bottom-8 -left-8 w-36 h-36 rounded-full bg-[#5FF5B4]/6 blur-[50px]" />}
         <span className={S.sectionLabel(d)}><Activity size={12} /> Métricas ReFi</span>
