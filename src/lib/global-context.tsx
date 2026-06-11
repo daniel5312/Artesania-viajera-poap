@@ -5,6 +5,7 @@ import { useAccount } from "wagmi";
 import { usePrivy } from "@privy-io/react-auth";
 import { createPublicClient, http, getAddress, formatUnits } from "viem";
 import { celo } from "viem/chains";
+import { BADGE_ADDRESS, BADGE_ABI } from "@/constants/abis/ArtesaniaBadgeABI";
 
 // ─── Constants ───────────────────────────────────────────────────────────
 const GDOLLAR_TOKEN_ADDRESS = "0x62B8B11039fcfE5aB0C56E502b1C372A3d2a9C7A";
@@ -73,16 +74,38 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
     if (saved) setUserRoleState(saved);
   }, []);
 
-  // ── Set default role to turista if connected but no role
+  // ── 🏆 ENFOQUE 100% WEB3: Check On-Chain de Credencial NFT
   useEffect(() => {
-    if (isConnected && !userRole) {
-      const saved = typeof window !== "undefined"
-        ? (localStorage.getItem(ROLE_STORAGE_KEY) as UserRole | null)
-        : null;
-      setUserRoleState(saved ?? "turista");
-    }
-  }, [isConnected, userRole]);
+    if (!activeAddress) return;
 
+    const checkWeb3Identity = async () => {
+      try {
+        // Asumimos que el ID de la credencial maestra de artesano es 1 o 999.
+        // Consultamos el saldo del usuario en el contrato ERC-1155.
+        const balance = await publicClient.readContract({
+          address: getAddress(BADGE_ADDRESS) as `0x${string}`,
+          abi: BADGE_ABI,
+          functionName: "balanceOf",
+          args: [activeAddress, 1n], // Revisa si tiene el token ID 1
+        });
+
+        if ((balance as bigint) > 0n) {
+          console.log("🏆 Identidad Web3 Confirmada: El usuario posee la Credencial de Artesano NFT.");
+          setUserRole("artesano");
+        } else {
+          console.log("ℹ️ No se detectó Credencial NFT. Se mostrará el Onboarding o se usará el caché.");
+          // No forzamos turista para permitir que el Onboarding manual funcione en la Hackathon.
+        }
+      } catch (error) {
+        console.error("Error consultando la identidad Web3:", error);
+      }
+    };
+
+    checkWeb3Identity();
+  }, [activeAddress]);
+
+  // We do NOT set a default role anymore. If it's null, the AppShell will show the Onboarding screen.
+  
   // ── Poll G$ balance every 10s — no useCallback, direct async in useEffect
   useEffect(() => {
     if (!activeAddress) {
