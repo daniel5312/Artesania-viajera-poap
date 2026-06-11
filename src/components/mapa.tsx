@@ -24,6 +24,7 @@ const PUNTOS_RECLAMO = [
   { id: 2, pueblo: "Guatapé", nombre: "Muelle Principal", coords: [6.232, -75.158], tipo: "NFT" },
   { id: 3, pueblo: "Jardín",  nombre: "Café de la Unión", coords: [5.598, -75.819], tipo: "Sello" },
   { id: 5, pueblo: "Santa Fe", nombre: "Puente de Occidente", coords: [6.596, -75.823], tipo: "Sello" },
+  { id: 6, pueblo: "Envigado", nombre: "Parque de Envigado", coords: [6.1759, -75.5917], tipo: "Sello" },
 ];
 
 const createCustomIcon = (isNear: boolean) => {
@@ -44,10 +45,11 @@ function RecenterMap({ coords }: { coords: [number, number] }) {
   return null;
 }
 
-export default function Mapa({ selectedTown = "Guatapé" }: { selectedTown?: string }) {
+export default function Mapa({ selectedTown = "Envigado" }: { selectedTown?: string }) {
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
+  const [liveArtisans, setLiveArtisans] = useState<any[]>([]);
 
-  // Obtener ubicación real
+  // Obtener ubicación real del Turista
   useEffect(() => {
     if (typeof window === "undefined" || !navigator.geolocation) return;
     const watchId = navigator.geolocation.watchPosition(
@@ -56,6 +58,29 @@ export default function Mapa({ selectedTown = "Guatapé" }: { selectedTown?: str
       { enableHighAccuracy: true }
     );
     return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
+
+  // Hacer Polling a la API para buscar artesanos activos
+  useEffect(() => {
+    const fetchArtisans = async () => {
+      try {
+        const res = await fetch("/api/location");
+        if (res.ok) {
+          const data = await res.json();
+          const artisansArray = Object.entries(data.artisans || {}).map(([wallet, info]: any) => ({
+            id: wallet,
+            ...info
+          }));
+          setLiveArtisans(artisansArray);
+        }
+      } catch (e) {
+        console.error("Error buscando artesanos en vivo", e);
+      }
+    };
+    
+    fetchArtisans();
+    const interval = setInterval(fetchArtisans, 5000); // Actualiza cada 5s
+    return () => clearInterval(interval);
   }, []);
 
   const filteredPoints = useMemo(() => PUNTOS_RECLAMO.filter(p => p.pueblo === selectedTown), [selectedTown]);
@@ -109,6 +134,29 @@ export default function Mapa({ selectedTown = "Guatapé" }: { selectedTown?: str
             </Marker>
           );
         })}
+
+        {/* 🎨 PINES DE ARTESANOS EN VIVO */}
+        {liveArtisans.map((artisan) => (
+          <Marker key={artisan.id} position={[artisan.lat, artisan.lng]} icon={createCustomIcon(true)}>
+            <Popup>
+              <div className="p-2 flex flex-col gap-2 min-w-[160px]">
+                <div className="flex flex-col mb-1">
+                  <span className="text-[9px] font-black uppercase text-[#8162f3] flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#8162f3] animate-pulse"></span>
+                    Artesano Activo en {artisan.puebloId.replace("_", " ")}
+                  </span>
+                  <p className="text-[10px] font-bold text-zinc-600 leading-tight mt-1">
+                    Reclama tu NFT, crea un momento único con el artesano y recibe tokens de recompensa.
+                  </p>
+                </div>
+                <button className="w-full py-2 bg-[#8162f3] text-white rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(129,98,243,0.4)] active:scale-95 transition-all">
+                  <MapPin size={13} /> Ir a Escanear QR
+                </button>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+
         <RecenterMap coords={center} />
       </MapContainer>
 

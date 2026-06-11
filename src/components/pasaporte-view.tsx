@@ -268,7 +268,7 @@ export function PasaporteView({
     }
   }, [authenticated, userAddress]);
 
-  const [puebloActivo, setPuebloActivo] = useState("Guatapé");
+  const [puebloActivo, setPuebloActivo] = useState("Envigado");
 
   const handleSimularMint = async (puebloId: string, puebloName: string) => {
     if (!authenticated) {
