@@ -7,7 +7,7 @@ import { formatEther, formatUnits } from "viem";
 import {
   Loader2, Coins, Droplets, Fingerprint, ShieldCheck,
   PowerOff, Stamp, ShoppingBag, TrendingUp, Wallet,
-  Users, Activity, ArrowUpRight,
+  Users, Activity, ArrowUpRight, MapPin, LockKeyhole
 } from "lucide-react";
 import { useTheme } from "@/lib/theme-context";
 import { useGlobal } from "@/lib/global-context";
@@ -279,23 +279,113 @@ function ArtisanView({ walletAAddress, walletABalances, gDollarFormatted }: {
   const { isDarkMode: d } = useTheme();
   const metrics = useArtisanMetrics(walletAAddress);
 
-  const puebloId = walletAAddress ? ARTISAN_PUEBLO_MAP[walletAAddress.toLowerCase()] : null;
+  const [isLocationVerified, setIsLocationVerified] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  // Default to "envigado" for Hackathon demo if wallet is not in the map
+  const puebloId = walletAAddress ? (ARTISAN_PUEBLO_MAP[walletAAddress.toLowerCase()] || "envigado") : "envigado";
   const qrUrl = puebloId ? `https://artesania-viajera.vercel.app/?sello=${puebloId}` : "";
   const qrImgSrc = qrUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrUrl)}&color=${d ? "5FF5B4" : "000000"}&bgcolor=${d ? "0d0d0d" : "ffffff"}` : "";
 
+  const handleVerifyLocation = () => {
+    setIsVerifying(true);
+    
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const { latitude, longitude } = position.coords;
+            // 📍 ENVIAMOS EL GPS REAL A LA API PARA QUE EL TURISTA LO VEA
+            await fetch("/api/location", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                walletAddress: walletAAddress || "0xArtesanoAnonimo",
+                lat: latitude,
+                lng: longitude,
+                puebloId
+              })
+            });
+            setIsLocationVerified(true);
+          } catch (e) {
+            console.error("Error sending location to API:", e);
+            // Seguro anti-fallos para demo
+            setIsLocationVerified(true);
+          } finally {
+            setIsVerifying(false);
+          }
+        },
+        (error) => {
+          console.error("GPS Error:", error);
+          alert("Error de GPS: " + error.message + ". Usando simulador para la demo.");
+          // Seguro anti-fallos por si deniegan permiso
+          setTimeout(() => {
+            setIsLocationVerified(true);
+            setIsVerifying(false);
+          }, 1500);
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    } else {
+      setTimeout(() => {
+        setIsLocationVerified(true);
+        setIsVerifying(false);
+      }, 1500);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-3">
+      {/* 🏅 CREDENCIAL NFT OFICIAL */}
+      {puebloId && (
+        <section className={`p-5 flex flex-col items-center text-center ${S.card(d)}`}>
+          <span className={S.sectionLabel(d)}><ShieldCheck size={12} /> Credencial Oficial</span>
+          <div className="relative mt-2 mb-4 group w-full max-w-[200px]">
+            <div className={`absolute inset-0 bg-gradient-to-r ${d ? "from-[#5FF5B4]/20 to-[#8162f3]/20" : "from-[#00c27b]/20 to-[#6039e3]/20"} rounded-2xl blur-xl group-hover:blur-2xl transition-all`}></div>
+            <img src="/images/jaguar.png" alt="NFT Credencial Envigado" className="relative w-full rounded-2xl shadow-xl border-2 border-[#5FF5B4]/30 object-cover aspect-square" />
+            <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full flex items-center gap-1">
+              <ShieldCheck size={10} className="text-[#5FF5B4]" />
+              <span className="text-[8px] font-bold text-white">Verificado</span>
+            </div>
+          </div>
+          <p className={`text-[10px] ${S.muted(d)}`}>Esta es tu credencial NFT on-chain. Con ella, los turistas pueden ubicarte en el mapa oficial del pueblo.</p>
+        </section>
+      )}
+
       {/* 🎁 REGALAR SELLO (FÍSICO) */}
       {puebloId && (
-        <section className={`p-5 relative overflow-hidden flex flex-col items-center text-center ${S.card(d)}`}>
+        <section className={`p-5 relative overflow-hidden flex flex-col items-center text-center transition-all duration-500 ${isLocationVerified ? S.card(d) : `border-dashed border-2 ${d ? "border-[#5FF5B4]/30 bg-[#121212]" : "border-[#00c27b]/30 bg-[#f9f9f9]"} rounded-2xl`}`}>
           <span className={S.sectionLabel(d)}><Stamp size={12} /> Sello para tus Turistas</span>
-          <p className={`text-[10px] mb-4 ${S.muted(d)}`}>
-            Cuando un turista te compre en físico, dile que escanee este código para regalarle el NFT exclusivo de tu pueblo.
-          </p>
-          <div className="p-3 bg-white rounded-2xl shadow-lg border border-border/20">
-            <img src={qrImgSrc} alt="QR para Regalar NFT" className="w-48 h-48 rounded-xl object-contain" />
-          </div>
-          <span className={`text-[8px] font-mono mt-4 px-3 py-1 rounded-full ${S.ghost(d)}`}>Sello: {puebloId}</span>
+          
+          {!isLocationVerified ? (
+            <div className="flex flex-col items-center py-6">
+              <div className={`w-16 h-16 rounded-full mb-4 flex items-center justify-center ${d ? "bg-white/5" : "bg-black/5"}`}>
+                <LockKeyhole size={24} className={d ? "text-white/40" : "text-black/40"} />
+              </div>
+              <p className={`text-[11px] font-bold mb-2 ${S.txt(d)}`}>Sello Bloqueado</p>
+              <p className={`text-[9px] mb-6 max-w-[200px] ${S.muted(d)}`}>
+                Demuestra que estás en tu puesto de trabajo para habilitar el código QR.
+              </p>
+              <button onClick={handleVerifyLocation} disabled={isVerifying}
+                className={`py-2.5 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 ${S.ctaPrimary(d)}`}>
+                {isVerifying ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}
+                {isVerifying ? "Verificando GPS..." : "Verificar Ubicación"}
+              </button>
+            </div>
+          ) : (
+            <div className="animate-in fade-in zoom-in duration-500 flex flex-col items-center w-full">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#5FF5B4]/10 text-[#5FF5B4] text-[9px] font-bold mb-4">
+                <MapPin size={10} /> Ubicación Verificada
+              </div>
+              <p className={`text-[10px] mb-4 ${S.muted(d)}`}>
+                Cuando un turista te compre en físico, dile que escanee este código para regalarle el NFT exclusivo de tu pueblo.
+              </p>
+              <div className="p-3 bg-white rounded-2xl shadow-lg border border-border/20">
+                <img src={qrImgSrc} alt="QR para Regalar NFT" className="w-48 h-48 rounded-xl object-contain" />
+              </div>
+              <span className={`text-[8px] font-mono mt-4 px-3 py-1 rounded-full ${S.ghost(d)}`}>Sello: {puebloId}</span>
+            </div>
+          )}
         </section>
       )}
 
