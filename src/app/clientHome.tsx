@@ -30,7 +30,7 @@ function AppShell() {
 
   // Traemos el contexto del nuevo tema
   const { isDarkMode } = useTheme();
-  const { userRole } = useGlobal();
+  const { userRole, setUserRole } = useGlobal();
 
   const [mounted, setMounted] = useState(false);
   const [isAutoMinting, setIsAutoMinting] = useState(false);
@@ -98,6 +98,29 @@ function AppShell() {
   }, [selloPendiente, authenticated, wallets, isAutoMinting, router]);
 
   if (!mounted) return null;
+
+  if (authenticated && userRole === null) {
+    return (
+      <div className={`mx-auto min-h-screen max-w-md relative overflow-hidden bg-background text-foreground flex flex-col items-center justify-center p-6 ${isDarkMode ? "dark" : ""}`}>
+        <h1 className="text-2xl font-black mb-2 text-center">¡Bienvenido a Artesanía Viajera!</h1>
+        <p className="text-sm text-center mb-8 opacity-70">Para personalizar tu experiencia, cuéntanos cómo vas a usar la aplicación.</p>
+        
+        <div className="flex flex-col gap-4 w-full">
+          <button onClick={() => setUserRole("turista")} className="p-6 rounded-2xl border-2 border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors flex flex-col items-center gap-3 text-center active:scale-95">
+            <span className="text-4xl">🌍</span>
+            <span className="font-bold text-lg">Soy Turista</span>
+            <span className="text-xs opacity-70">Quiero comprar artesanías y coleccionar sellos.</span>
+          </button>
+          
+          <button onClick={() => setUserRole("artesano")} className="p-6 rounded-2xl border-2 border-[#5FF5B4]/20 bg-[#5FF5B4]/5 hover:bg-[#5FF5B4]/10 transition-colors flex flex-col items-center gap-3 text-center active:scale-95">
+            <span className="text-4xl">🎨</span>
+            <span className="font-bold text-lg">Soy Artesano</span>
+            <span className="text-xs opacity-70">Quiero cobrar, ver mis métricas y regalar sellos.</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
