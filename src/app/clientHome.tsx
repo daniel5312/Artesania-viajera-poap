@@ -47,57 +47,111 @@ function AppShell() {
     }
   }, [userRole]);
 
-  const selloPendiente = searchParams.get("sello");
+  const actionParam = searchParams.get("action");
+  const idParam = searchParams.get("id");
+
+  const [qrAction, setQrAction] = useState<string | null>(null);
+  const [qrId, setQrId] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
     if (sdk?.actions?.ready) sdk.actions.ready();
   }, []);
 
-  // 🪄 LA MAGIA DEL QR FÍSICO (Auto-minteo)
+  // Guardar parámetros de URL en estado/sessionStorage para que sobrevivan al login
+  useEffect(() => {
+    if (actionParam && idParam) {
+      setQrAction(actionParam);
+      setQrId(idParam);
+      sessionStorage.setItem("qr_action", actionParam);
+      sessionStorage.setItem("qr_id", idParam);
+      
+      // Limpiar URL visualmente
+      router.replace("/", { scroll: false });
+    } else {
+      const savedAction = sessionStorage.getItem("qr_action");
+      const savedId = sessionStorage.getItem("qr_id");
+      if (savedAction && savedId) {
+        setQrAction(savedAction);
+        setQrId(savedId);
+      }
+    }
+  }, [actionParam, idParam, router]);
+
+  // 🪄 MÁQUINA DE ESTADOS: AUTO-MINTEO POST-LOGIN
   useEffect(() => {
     const autoMint = async () => {
-      if (
-        selloPendiente &&
-        authenticated &&
-        wallets.length > 0 &&
-        !isAutoMinting
-      ) {
+      if (qrAction && qrId && authenticated && wallets.length > 0 && !isAutoMinting) {
         setIsAutoMinting(true);
         const wallet = wallets[0];
 
         try {
-          console.log(
-            `Minteando automáticamente el sello de ${selloPendiente}...`,
-          );
+          console.log(`Minteando automáticamente ${qrAction} para ID: ${qrId}...`);
 
-          const response = await fetch("/api/mint-passport", {
+          const endpoint = qrAction === "claim_passport" ? "/api/mint-passport" : "/api/mint-badge";
+          const body = qrAction === "claim_passport" 
+            ? { recipient: wallet.address, puebloId: qrId }
+            : { recipient: wallet.address, badgeId: qrId }; // En MVP pasamos el ID del artesano como badge
+
+          const response = await fetch(endpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              recipient: wallet.address,
-              tipo: `Sello ${selloPendiente}`,
-            }),
+            body: JSON.stringify(body),
           });
 
           if (response.ok) {
-            alert(
-              `¡Magia! 🪄 El sello de ${selloPendiente} ha sido añadido a tu pasaporte.`,
-            );
+            const data = await response.json().catch(() => ({}));
+            if (data.status === "already_claimed") {
+              alert(`¡Ups! Ya tienes este sello en tu colección. No puedes reclamarlo dos veces.`);
+            } else {
+              alert(`¡Magia! 🪄 Has recibido un regalo exclusivo en tu pasaporte.`);
+            }
+          } else {
+            alert(`Aviso: Este sello ya está en tu colección o hubo un error de red.`);
           }
         } catch (error) {
           console.error("Error en auto-mint:", error);
         } finally {
           setIsAutoMinting(false);
-          router.replace("/", { scroll: false });
+          setQrAction(null);
+          setQrId(null);
+          sessionStorage.removeItem("qr_action");
+          sessionStorage.removeItem("qr_id");
+          
+          if (userRole === "turista") setActiveTab("pasaporte");
         }
       }
     };
 
     autoMint();
-  }, [selloPendiente, authenticated, wallets, isAutoMinting, router]);
+  }, [qrAction, qrId, authenticated, wallets, isAutoMinting, userRole]);
 
   if (!mounted) return null;
+
+  // ESTADO PREVIEW (Aviso si hay QR pero no está logueado)
+  if (qrAction && qrId && !authenticated) {
+    return (
+      <div className={`mx-auto min-h-screen max-w-md relative overflow-hidden bg-background text-foreground flex flex-col items-center justify-center p-6 ${isDarkMode ? "dark" : ""}`}>
+        <div className="absolute inset-0 z-0 bg-gradient-to-br from-primary/20 via-background to-background"></div>
+        <div className="z-10 flex flex-col items-center text-center">
+          <div className="w-24 h-24 mb-6 rounded-3xl bg-primary/20 border-2 border-primary/50 shadow-[0_0_40px_rgba(var(--primary-rgb),0.3)] flex items-center justify-center animate-pulse">
+            <span className="text-4xl">🎁</span>
+          </div>
+          <h1 className="text-2xl font-black mb-2 uppercase tracking-tight">¡Regalo Desbloqueado!</h1>
+          <p className="text-sm opacity-80 mb-8 max-w-[250px]">
+            {qrAction === "claim_passport" 
+              ? `Estás a punto de recibir el Pasaporte Oficial de ${qrId.toUpperCase()}.`
+              : `Has desbloqueado el NFT Único de este Artesano.`}
+            <br/><br/>
+            Conéctate con tu billetera para guardarlo para siempre.
+          </p>
+          <button onClick={login} className="w-full py-4 bg-primary text-white font-black text-lg uppercase rounded-2xl shadow-xl active:scale-95 transition-all">
+            Conectar Billetera
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (authenticated && userRole === null) {
     return (
@@ -138,21 +192,6 @@ function AppShell() {
           <h2 className="text-xl font-black uppercase text-foreground">
             Estampando Sello...
           </h2>
-        </div>
-      )}
-
-      {/* AVISO SI HAY QR PERO NO ESTÁ LOGUEADO */}
-      {selloPendiente && !authenticated && (
-        <div className="mx-5 mt-4 p-4 rounded-2xl bg-primary/10 border border-primary/30 text-center animate-pulse">
-          <p className="text-sm font-bold text-primary mb-2">
-            ¡Tienes un sello de {selloPendiente} esperando!
-          </p>
-          <button
-            onClick={login}
-            className="text-xs bg-primary text-primary-foreground px-4 py-2 rounded-full font-bold shadow-md hover:scale-105 transition-transform"
-          >
-            Conectar para reclamar
-          </button>
         </div>
       )}
 
