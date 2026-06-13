@@ -100,13 +100,14 @@ export default function Mapa({ selectedTown = "Envigado" }: { selectedTown?: str
       >
         {/* Tiles Voyager: Mucho más coloridos (parques verdes, agua azul, calles detalladas) */}
         <TileLayer 
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
           attribution='&copy; OpenStreetMap'
+          maxZoom={19}
         />
         
         {filteredPoints.map((point) => {
           const dist = userPos ? getDistance(userPos[0], userPos[1], point.coords[0], point.coords[1]) : Infinity;
-          const isNear = dist < 200; 
+          const isNear = dist < 5000; // 5KM para la Demo
 
           return (
             <Marker key={point.id} position={point.coords as [number, number]} icon={createCustomIcon(isNear)}>
@@ -119,14 +120,14 @@ export default function Mapa({ selectedTown = "Envigado" }: { selectedTown?: str
 
                   {isNear ? (
                     <button className="w-full py-2.5 bg-[#5FF5B4] text-[#050505] rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(95,245,180,0.4)] active:scale-95 transition-all">
-                      <CheckCircle2 size={13} /> Reclamar {point.tipo}
+                      <CheckCircle2 size={13} /> Reclamar Recompensa y NFT
                     </button>
                   ) : (
                     <div className="flex flex-col gap-1">
                        <button disabled className="w-full py-2.5 bg-zinc-100 text-[#6b6862] rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 border border-zinc-200 opacity-70">
                         <Lock size={12} /> Bloqueado
                       </button>
-                      <p className="text-[7px] text-center font-bold text-zinc-400 mt-1">Acércate a 200m para desbloquear</p>
+                      <p className="text-[7px] text-center font-bold text-zinc-400 mt-1">Acércate al punto para desbloquear</p>
                     </div>
                   )}
                 </div>
@@ -156,6 +157,18 @@ export default function Mapa({ selectedTown = "Envigado" }: { selectedTown?: str
             </Popup>
           </Marker>
         ))}
+
+        {/* 🧍 TURISTA (TÚ) */}
+        {userPos && (
+          <Marker position={userPos} icon={createCustomIcon(false)}>
+             <Popup>
+               <div className="p-2 text-center min-w-[100px]">
+                 <p className="text-xs font-black text-[#0d0d0c] uppercase">Tú estás aquí</p>
+                 <p className="text-[9px] text-zinc-500 font-bold mt-1">Modo Turista</p>
+               </div>
+             </Popup>
+          </Marker>
+        )}
 
         <RecenterMap coords={center} />
       </MapContainer>
