@@ -281,11 +281,17 @@ function ArtisanView({ walletAAddress, walletABalances, gDollarFormatted }: {
 
   const [isLocationVerified, setIsLocationVerified] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [activeQRTab, setActiveQRTab] = useState<"passport" | "artisan">("passport");
 
   // Default to "envigado" for Hackathon demo if wallet is not in the map
   const puebloId = walletAAddress ? (ARTISAN_PUEBLO_MAP[walletAAddress.toLowerCase()] || "envigado") : "envigado";
-  const qrUrl = puebloId ? `https://artesania-viajera.vercel.app/?sello=${puebloId}` : "";
-  const qrImgSrc = qrUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrUrl)}&color=${d ? "5FF5B4" : "000000"}&bgcolor=${d ? "0d0d0d" : "ffffff"}` : "";
+  const qrPassportUrl = puebloId ? `https://artesania-viajera.vercel.app/?action=claim_passport&id=${puebloId}` : "";
+  const qrStampUrl = puebloId && walletAAddress ? `https://artesania-viajera.vercel.app/?action=claim_stamp&id=${walletAAddress}` : "";
+  
+  const currentQrUrl = activeQRTab === "passport" ? qrPassportUrl : qrStampUrl;
+  const qrImgSrc = currentQrUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(currentQrUrl)}&color=${d ? "5FF5B4" : "000000"}&bgcolor=${d ? "0d0d0d" : "ffffff"}` : "";
+
+  const [viewTab, setViewTab] = useState<"tools" | "wallet">("tools");
 
   const handleVerifyLocation = () => {
     setIsVerifying(true);
@@ -295,7 +301,6 @@ function ArtisanView({ walletAAddress, walletABalances, gDollarFormatted }: {
         async (position) => {
           try {
             const { latitude, longitude } = position.coords;
-            // 📍 ENVIAMOS EL GPS REAL A LA API PARA QUE EL TURISTA LO VEA
             await fetch("/api/location", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -309,7 +314,6 @@ function ArtisanView({ walletAAddress, walletABalances, gDollarFormatted }: {
             setIsLocationVerified(true);
           } catch (e) {
             console.error("Error sending location to API:", e);
-            // Seguro anti-fallos para demo
             setIsLocationVerified(true);
           } finally {
             setIsVerifying(false);
@@ -318,7 +322,6 @@ function ArtisanView({ walletAAddress, walletABalances, gDollarFormatted }: {
         (error) => {
           console.error("GPS Error:", error);
           alert("Error de GPS: " + error.message + ". Usando simulador para la demo.");
-          // Seguro anti-fallos por si deniegan permiso
           setTimeout(() => {
             setIsLocationVerified(true);
             setIsVerifying(false);
@@ -336,82 +339,126 @@ function ArtisanView({ walletAAddress, walletABalances, gDollarFormatted }: {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* 🏅 CREDENCIAL NFT OFICIAL */}
-      {puebloId && (
-        <section className={`p-5 flex flex-col items-center text-center ${S.card(d)}`}>
-          <span className={S.sectionLabel(d)}><ShieldCheck size={12} /> Credencial Oficial</span>
-          <div className="relative mt-2 mb-4 group w-full max-w-[200px]">
-            <div className={`absolute inset-0 bg-gradient-to-r ${d ? "from-[#5FF5B4]/20 to-[#8162f3]/20" : "from-[#00c27b]/20 to-[#6039e3]/20"} rounded-2xl blur-xl group-hover:blur-2xl transition-all`}></div>
-            <img src="/images/jaguar.png" alt="NFT Credencial Envigado" className="relative w-full rounded-2xl shadow-xl border-2 border-[#5FF5B4]/30 object-cover aspect-square" />
-            <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full flex items-center gap-1">
-              <ShieldCheck size={10} className="text-[#5FF5B4]" />
-              <span className="text-[8px] font-bold text-white">Verificado</span>
-            </div>
-          </div>
-          <p className={`text-[10px] ${S.muted(d)}`}>Esta es tu credencial NFT on-chain. Con ella, los turistas pueden ubicarte en el mapa oficial del pueblo.</p>
-        </section>
-      )}
+      {/* Selector Principal del Dashboard */}
+      <div className="flex bg-black/5 dark:bg-white/5 rounded-xl p-1 mb-2">
+        <button
+          onClick={() => setViewTab("tools")}
+          className={`flex-1 py-2.5 text-[10px] font-black uppercase rounded-lg transition-all ${viewTab === "tools" ? d ? "bg-[#121212] text-white shadow-md border border-white/10" : "bg-white text-black shadow-md border border-black/10" : "text-zinc-500"}`}
+        >
+          Herramientas
+        </button>
+        <button
+          onClick={() => setViewTab("wallet")}
+          className={`flex-1 py-2.5 text-[10px] font-black uppercase rounded-lg transition-all ${viewTab === "wallet" ? d ? "bg-[#121212] text-white shadow-md border border-white/10" : "bg-white text-black shadow-md border border-black/10" : "text-zinc-500"}`}
+        >
+          Mi Billetera
+        </button>
+      </div>
 
-      {/* 🎁 REGALAR SELLO (FÍSICO) */}
-      {puebloId && (
-        <section className={`p-5 relative overflow-hidden flex flex-col items-center text-center transition-all duration-500 ${isLocationVerified ? S.card(d) : `border-dashed border-2 ${d ? "border-[#5FF5B4]/30 bg-[#121212]" : "border-[#00c27b]/30 bg-[#f9f9f9]"} rounded-2xl`}`}>
-          <span className={S.sectionLabel(d)}><Stamp size={12} /> Sello para tus Turistas</span>
-          
-          {!isLocationVerified ? (
-            <div className="flex flex-col items-center py-6">
-              <div className={`w-16 h-16 rounded-full mb-4 flex items-center justify-center ${d ? "bg-white/5" : "bg-black/5"}`}>
-                <LockKeyhole size={24} className={d ? "text-white/40" : "text-black/40"} />
+      {viewTab === "tools" && (
+        <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          {/* 🏅 CREDENCIAL NFT OFICIAL */}
+          {puebloId && (
+            <section className={`p-5 flex flex-col items-center text-center ${S.card(d)}`}>
+              <span className={S.sectionLabel(d)}><ShieldCheck size={12} /> Credencial Oficial</span>
+              <div className="relative mt-2 mb-4 group w-full max-w-[200px]">
+                <div className={`absolute inset-0 bg-gradient-to-r ${d ? "from-[#5FF5B4]/20 to-[#8162f3]/20" : "from-[#00c27b]/20 to-[#6039e3]/20"} rounded-2xl blur-xl group-hover:blur-2xl transition-all`}></div>
+                <img src="/images/jaguar.png" alt="NFT Credencial Envigado" className="relative w-full rounded-2xl shadow-xl border-2 border-[#5FF5B4]/30 object-cover aspect-square" />
+                <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full flex items-center gap-1">
+                  <ShieldCheck size={10} className="text-[#5FF5B4]" />
+                  <span className="text-[8px] font-bold text-white">Verificado</span>
+                </div>
               </div>
-              <p className={`text-[11px] font-bold mb-2 ${S.txt(d)}`}>Sello Bloqueado</p>
-              <p className={`text-[9px] mb-6 max-w-[200px] ${S.muted(d)}`}>
-                Demuestra que estás en tu puesto de trabajo para habilitar el código QR.
-              </p>
-              <button onClick={handleVerifyLocation} disabled={isVerifying}
-                className={`py-2.5 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 ${S.ctaPrimary(d)}`}>
-                {isVerifying ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}
-                {isVerifying ? "Verificando GPS..." : "Verificar Ubicación"}
-              </button>
-            </div>
-          ) : (
-            <div className="animate-in fade-in zoom-in duration-500 flex flex-col items-center w-full">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#5FF5B4]/10 text-[#5FF5B4] text-[9px] font-bold mb-4">
-                <MapPin size={10} /> Ubicación Verificada
-              </div>
-              <p className={`text-[10px] mb-4 ${S.muted(d)}`}>
-                Cuando un turista te compre en físico, dile que escanee este código para regalarle el NFT exclusivo de tu pueblo.
-              </p>
-              <div className="p-3 bg-white rounded-2xl shadow-lg border border-border/20">
-                <img src={qrImgSrc} alt="QR para Regalar NFT" className="w-48 h-48 rounded-xl object-contain" />
-              </div>
-              <span className={`text-[8px] font-mono mt-4 px-3 py-1 rounded-full ${S.ghost(d)}`}>Sello: {puebloId}</span>
-            </div>
+              <p className={`text-[10px] ${S.muted(d)}`}>Esta es tu credencial NFT on-chain. Con ella, los turistas pueden ubicarte en el mapa oficial del pueblo.</p>
+            </section>
           )}
-        </section>
+
+          {/* 🎁 REGALAR SELLO (FÍSICO) */}
+          {puebloId && (
+            <section className={`p-5 relative overflow-hidden flex flex-col items-center text-center transition-all duration-500 ${isLocationVerified ? S.card(d) : `border-dashed border-2 ${d ? "border-[#5FF5B4]/30 bg-[#121212]" : "border-[#00c27b]/30 bg-[#f9f9f9]"} rounded-2xl`}`}>
+              <span className={S.sectionLabel(d)}><Stamp size={12} /> Regalos para Turistas</span>
+              
+              {!isLocationVerified ? (
+                <div className="flex flex-col items-center py-6">
+                  <div className={`w-16 h-16 rounded-full mb-4 flex items-center justify-center ${d ? "bg-white/5" : "bg-black/5"}`}>
+                    <LockKeyhole size={24} className={d ? "text-white/40" : "text-black/40"} />
+                  </div>
+                  <p className={`text-[11px] font-bold mb-2 ${S.txt(d)}`}>Códigos Bloqueados</p>
+                  <p className={`text-[9px] mb-6 max-w-[200px] ${S.muted(d)}`}>
+                    Demuestra que estás en tu puesto de trabajo para habilitar tus códigos QR.
+                  </p>
+                  <button onClick={handleVerifyLocation} disabled={isVerifying}
+                    className={`py-2.5 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 ${S.ctaPrimary(d)}`}>
+                    {isVerifying ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}
+                    {isVerifying ? "Verificando GPS..." : "Verificar Ubicación"}
+                  </button>
+                </div>
+              ) : (
+                <div className="animate-in fade-in zoom-in duration-500 flex flex-col items-center w-full">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#5FF5B4]/10 text-[#5FF5B4] text-[9px] font-bold mb-3">
+                    <MapPin size={10} /> Ubicación Verificada
+                  </div>
+
+                  {/* Selector de QRs */}
+                  <div className="flex bg-black/10 dark:bg-white/5 rounded-xl p-1 mb-4 w-full max-w-[240px]">
+                    <button
+                      onClick={() => setActiveQRTab("passport")}
+                      className={`flex-1 py-2 text-[9px] font-black uppercase rounded-lg transition-all ${activeQRTab === "passport" ? "bg-[#5FF5B4] text-black shadow-md" : "text-zinc-500 dark:text-zinc-400"}`}
+                    >
+                      Pasaporte Pueblo
+                    </button>
+                    <button
+                      onClick={() => setActiveQRTab("artisan")}
+                      className={`flex-1 py-2 text-[9px] font-black uppercase rounded-lg transition-all ${activeQRTab === "artisan" ? "bg-[#8162f3] text-white shadow-md" : "text-zinc-500 dark:text-zinc-400"}`}
+                    >
+                      Sello Único
+                    </button>
+                  </div>
+
+                  <p className={`text-[9px] mb-4 min-h-[30px] flex items-center ${S.muted(d)}`}>
+                    {activeQRTab === "passport" 
+                      ? "Escaneo principal. El turista recibe el pasaporte base del pueblo si aún no lo tiene."
+                      : "Escaneo por compra. El turista recibe tu NFT único dentro del pasaporte para guardar recuerdos."}
+                  </p>
+                  
+                  <div className="p-3 bg-white rounded-2xl shadow-lg border border-border/20">
+                    <img src={qrImgSrc} alt="QR de Regalo" className="w-48 h-48 rounded-xl object-contain transition-opacity duration-300" />
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+        </div>
       )}
 
-      <section className={`p-5 relative overflow-hidden ${S.card(d)}`}>
-        {d && <div className="pointer-events-none absolute -bottom-8 -left-8 w-36 h-36 rounded-full bg-[#5FF5B4]/6 blur-[50px]" />}
-        <span className={S.sectionLabel(d)}><Activity size={12} /> Métricas ReFi</span>
-        <div className="grid grid-cols-3 gap-2">
-          <div className={`flex flex-col p-3 ${S.inner(d)}`}><span className={`text-[8px] font-bold uppercase mb-1 ${S.muted(d)}`}>Ganado</span><span className={`text-sm font-black tabular-nums ${S.mint}`}>{metrics.totalReceived}</span><span className={`text-[7px] font-bold ${S.muted(d)}`}>CELO</span></div>
-          <div className={`flex flex-col p-3 ${S.inner(d)}`}><span className={`text-[8px] font-bold uppercase mb-1 ${S.muted(d)}`}>Ventas</span><span className={`text-sm font-black tabular-nums ${S.txt(d)}`}>{metrics.salesCount}</span><span className={`text-[7px] font-bold ${S.muted(d)}`}>TOTAL</span></div>
-          <div className={`flex flex-col p-3 ${S.inner(d)}`}><span className={`text-[8px] font-bold uppercase mb-1 ${S.muted(d)}`}>Pools</span><span className={`text-sm font-black tabular-nums ${S.txt(d)}`}>{metrics.poolDonations}</span><span className={`text-[7px] font-bold ${S.muted(d)}`}>CELO</span></div>
-        </div>
-      </section>
+      {viewTab === "wallet" && (
+        <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <section className={`p-5 relative overflow-hidden ${S.card(d)}`}>
+            {d && <div className="pointer-events-none absolute -bottom-8 -left-8 w-36 h-36 rounded-full bg-[#5FF5B4]/6 blur-[50px]" />}
+            <span className={S.sectionLabel(d)}><Activity size={12} /> Métricas ReFi</span>
+            <div className="grid grid-cols-3 gap-2">
+              <div className={`flex flex-col p-3 ${S.inner(d)}`}><span className={`text-[8px] font-bold uppercase mb-1 ${S.muted(d)}`}>Ganado</span><span className={`text-sm font-black tabular-nums ${S.mint}`}>{metrics.totalReceived}</span><span className={`text-[7px] font-bold ${S.muted(d)}`}>CELO</span></div>
+              <div className={`flex flex-col p-3 ${S.inner(d)}`}><span className={`text-[8px] font-bold uppercase mb-1 ${S.muted(d)}`}>Ventas</span><span className={`text-sm font-black tabular-nums ${S.txt(d)}`}>{metrics.salesCount}</span><span className={`text-[7px] font-bold ${S.muted(d)}`}>TOTAL</span></div>
+              <div className={`flex flex-col p-3 ${S.inner(d)}`}><span className={`text-[8px] font-bold uppercase mb-1 ${S.muted(d)}`}>Pools</span><span className={`text-sm font-black tabular-nums ${S.txt(d)}`}>{metrics.poolDonations}</span><span className={`text-[7px] font-bold ${S.muted(d)}`}>CELO</span></div>
+            </div>
+          </section>
 
-      <section className={`p-5 ${S.card(d)}`}>
-        <div className="flex items-center justify-between mb-4">
-          <span className={S.sectionLabel(d)}><ShieldCheck size={12} /> Wallet Principal</span>
-          <span className={`text-[8px] px-2 py-0.5 rounded-full font-bold ${S.ghost(d)}`}>{walletAAddress ? "Celo Mainnet" : "—"}</span>
-        </div>
-        <p className={`text-[9px] font-mono truncate mb-3 ${S.muted(d)}`}>{walletAAddress ?? "—"}</p>
-        <div className="grid grid-cols-2 gap-2">
-          <div className={`flex flex-col p-3 ${S.inner(d)}`}><span className={`text-[8px] font-bold uppercase mb-1 ${S.muted(d)}`}>CELO</span><span className={`text-sm font-black tabular-nums ${S.txt(d)}`}>{walletABalances.celo}</span></div>
-          <div className={`flex flex-col p-3 ${S.inner(d)}`}><span className={`text-[8px] font-bold uppercase mb-1 ${S.muted(d)}`}>G$</span><span className={`text-sm font-black tabular-nums ${S.mint}`}>{gDollarFormatted}</span></div>
-        </div>
-      </section>
+          <section className={`p-5 ${S.card(d)}`}>
+            <div className="flex items-center justify-between mb-4">
+              <span className={S.sectionLabel(d)}><ShieldCheck size={12} /> Wallet Principal</span>
+              <span className={`text-[8px] px-2 py-0.5 rounded-full font-bold ${S.ghost(d)}`}>{walletAAddress ? "Celo Mainnet" : "—"}</span>
+            </div>
+            <p className={`text-[9px] font-mono truncate mb-3 ${S.muted(d)}`}>{walletAAddress ?? "—"}</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className={`flex flex-col p-3 ${S.inner(d)}`}><span className={`text-[8px] font-bold uppercase mb-1 ${S.muted(d)}`}>CELO</span><span className={`text-sm font-black tabular-nums ${S.txt(d)}`}>{walletABalances.celo}</span></div>
+              <div className={`flex flex-col p-3 ${S.inner(d)}`}><span className={`text-[8px] font-bold uppercase mb-1 ${S.muted(d)}`}>G$</span><span className={`text-sm font-black tabular-nums ${S.mint}`}>{gDollarFormatted}</span></div>
+            </div>
+          </section>
 
-      <GoodWalletSection walletAAddress={walletAAddress} isDark={d} />
+          <GoodWalletSection walletAAddress={walletAAddress} isDark={d} />
+        </div>
+      )}
+
     </div>
   );
 }
