@@ -49,6 +49,7 @@ function AppShell() {
 
   const actionParam = searchParams.get("action");
   const idParam = searchParams.get("id");
+  const simulateParam = searchParams.get("simulate") === "true";
 
   const [qrAction, setQrAction] = useState<string | null>(null);
   const [qrId, setQrId] = useState<string | null>(null);
@@ -128,8 +129,9 @@ function AppShell() {
 
   if (!mounted) return null;
 
-  // ESTADO PREVIEW (Aviso si hay QR pero no está logueado)
-  if (qrAction && qrId && !authenticated) {
+  // ESTADO PREVIEW (Aviso si hay QR pero no está logueado, o si forzamos la simulación)
+  const isSimulatingPreview = simulateParam && qrAction && qrId;
+  if ((qrAction && qrId && !authenticated) || isSimulatingPreview) {
     return (
       <div className={`mx-auto min-h-screen max-w-md relative overflow-hidden bg-background text-foreground flex flex-col items-center justify-center p-6 ${isDarkMode ? "dark" : ""}`}>
         <div className="absolute inset-0 z-0 bg-gradient-to-br from-primary/20 via-background to-background"></div>
@@ -145,7 +147,17 @@ function AppShell() {
             <br/><br/>
             Conéctate con tu billetera para guardarlo para siempre.
           </p>
-          <button onClick={login} className="w-full py-4 bg-primary text-white font-black text-lg uppercase rounded-2xl shadow-xl active:scale-95 transition-all">
+          <button 
+            onClick={() => {
+              if (isSimulatingPreview) {
+                // Removemos el parámetro 'simulate' para que el useEffect de automint se dispare normalmente con la sesión actual
+                window.location.href = window.location.pathname + "?action=" + qrAction + "&id=" + qrId;
+              } else {
+                login();
+              }
+            }} 
+            className="w-full py-4 bg-primary text-white font-black text-lg uppercase rounded-2xl shadow-xl active:scale-95 transition-all"
+          >
             Conectar Billetera
           </button>
         </div>
