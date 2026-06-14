@@ -313,7 +313,7 @@ export function MomentosView({
                       size={32}
                     />
                     <span className="text-xs font-bold text-primary">
-                      Subiendo a la Blockchain...
+                      Inmortalizando en IPFS...
                     </span>
                   </div>
                 )}
@@ -560,7 +560,7 @@ function MomentosFeed() {
                 {procesando && (
                   <div className="absolute inset-0 bg-background/60 flex flex-col items-center justify-center">
                     <Loader2 className="animate-spin text-primary mb-2" size={32} />
-                    <span className="text-xs font-bold text-primary">Subiendo a la Blockchain...</span>
+                    <span className="text-xs font-bold text-primary">Inmortalizando en IPFS...</span>
                   </div>
                 )}
               </div>
