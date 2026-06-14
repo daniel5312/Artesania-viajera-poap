@@ -311,6 +311,47 @@ export function PasaporteView({
         {onNavigate && <WalletBalanceButton onOpen={() => onNavigate("dashboard")} />}
       </header>
 
+      {/* 🔴 AVISO DE VERIFICACIÓN FACIAL (Para Recompensa) */}
+      {isWhitelisted === false && authenticated && (
+        <div className={`p-4 rounded-2xl border animate-in slide-in-from-top-2 fade-in duration-500 shadow-xl relative overflow-hidden ${isDarkMode ? "bg-amber-500/10 border-amber-500/30" : "bg-amber-50 border-amber-200"}`}>
+          <div className="absolute top-0 left-0 w-1 h-full bg-amber-500" />
+          <div className="flex items-start gap-3">
+            <div className={`p-2 rounded-full mt-1 ${isDarkMode ? "bg-amber-500/20 text-amber-400" : "bg-amber-100 text-amber-600"}`}>
+              <UserCheck size={18} />
+            </div>
+            <div className="flex flex-col flex-1">
+              <h3 className={`text-[11px] font-black uppercase tracking-widest ${isDarkMode ? "text-amber-400" : "text-amber-700"}`}>
+                {lang === "es" ? "Verificación Requerida" : "Verification Required"}
+              </h3>
+              <p className={`text-[10px] mt-1 mb-3 leading-relaxed ${isDarkMode ? "text-amber-200/80" : "text-amber-800/80"}`}>
+                {lang === "es" 
+                  ? "Verifícate facialmente con GoodDollar para probar que eres un humano único y recibir tus tokens de recompensa." 
+                  : "Verify your face with GoodDollar to prove you are a unique human and receive your reward tokens."}
+              </p>
+              {fvLink ? (
+                <a 
+                  href={fvLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-center transition-all shadow-md active:scale-95 ${isDarkMode ? "bg-amber-500 text-amber-950" : "bg-amber-500 text-white"}`}
+                >
+                  {lang === "es" ? "Iniciar Verificación" : "Start Verification"}
+                </a>
+              ) : (
+                <button 
+                  onClick={handleCheckIdentity}
+                  disabled={cargando}
+                  className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-center transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 ${isDarkMode ? "bg-amber-500 text-amber-950" : "bg-amber-500 text-white"}`}
+                >
+                  {cargando ? <Loader2 size={14} className="animate-spin" /> : <Fingerprint size={14} />}
+                  {lang === "es" ? "Obtener Link" : "Get Link"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="h-64 w-full overflow-hidden rounded-[2.5rem] border-4 border-[#faf9f7] dark:border-[#0d0d0d] shadow-2xl z-0">
         <MapaReal selectedTown={puebloActivo} />
       </div>
