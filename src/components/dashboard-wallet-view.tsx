@@ -424,6 +424,17 @@ function ArtisanView({ walletAAddress, walletABalances, gDollarFormatted }: {
                   <div className="p-3 bg-white rounded-2xl shadow-lg border border-border/20">
                     <img src={qrImgSrc} alt="QR de Regalo" className="w-48 h-48 rounded-xl object-contain transition-opacity duration-300" />
                   </div>
+
+                  <button 
+                    onClick={() => {
+                      if (currentQrUrl) {
+                        window.location.href = currentQrUrl + "&simulate=true";
+                      }
+                    }}
+                    className="mt-4 px-5 py-2.5 bg-primary/20 hover:bg-primary/30 text-primary text-[10px] font-black uppercase rounded-xl transition-all shadow-sm active:scale-95 flex items-center gap-2"
+                  >
+                    Simular Escaneo de QR
+                  </button>
                 </div>
               )}
             </section>
