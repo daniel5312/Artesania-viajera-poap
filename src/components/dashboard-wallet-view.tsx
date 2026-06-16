@@ -149,14 +149,29 @@ function GoodWalletSection({ walletAAddress, isDark: d }: { walletAAddress: stri
       </div>
 
       {!walletB && (
-        <div className="mt-2 text-center">
-          <p className={`text-[10px] mb-3 ${S.muted(d)}`}>
-            Conecta tu GoodWallet para reclamar UBI diario y activar el goteo de Superfluid.
-          </p>
-          <a href="https://wallet.gooddollar.org" target="_blank" rel="noopener noreferrer"
-             className={`inline-flex items-center justify-center w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-[#00c27b]/30 text-[#00c27b] hover:bg-[#00c27b]/10 transition-colors`}>
-            👤 Crear GoodWallet (Verificación Facial)
-          </a>
+        <div className={`mt-2 p-4 rounded-2xl border animate-in slide-in-from-top-2 fade-in duration-500 shadow-xl relative overflow-hidden ${d ? "bg-amber-500/10 border-amber-500/30" : "bg-amber-50 border-amber-200"}`}>
+          <div className="absolute top-0 left-0 w-1 h-full bg-amber-500" />
+          <div className="flex items-start gap-3">
+            <div className={`p-2 rounded-full mt-1 ${d ? "bg-amber-500/20 text-amber-400" : "bg-amber-100 text-amber-600"}`}>
+              <UserCheck size={18} />
+            </div>
+            <div className="flex flex-col flex-1">
+              <h3 className={`text-[11px] font-black uppercase tracking-widest ${d ? "text-amber-400" : "text-amber-700"}`}>
+                Verificación Requerida
+              </h3>
+              <p className={`text-[10px] mt-1 mb-3 leading-relaxed ${d ? "text-amber-200/80" : "text-amber-800/80"}`}>
+                Crea tu GoodWallet y verifícate facialmente. Luego conéctala aquí para recibir tu Ingreso Básico (UBI) y activar el goteo automático hacia tu billetera principal.
+              </p>
+              <a 
+                href="https://wallet.gooddollar.org" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-center transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 ${d ? "bg-amber-500 text-amber-950 hover:bg-amber-400" : "bg-amber-500 text-white hover:bg-amber-600"}`}
+              >
+                👤 Crear GoodWallet
+              </a>
+            </div>
+          </div>
         </div>
       )}
 
@@ -285,8 +300,9 @@ function ArtisanView({ walletAAddress, walletABalances, gDollarFormatted }: {
 
   // Default to "envigado" for Hackathon demo if wallet is not in the map
   const puebloId = walletAAddress ? (ARTISAN_PUEBLO_MAP[walletAAddress.toLowerCase()] || "envigado") : "envigado";
-  const qrPassportUrl = puebloId ? `https://artesania-viajera.vercel.app/?action=claim_passport&id=${puebloId}` : "";
-  const qrStampUrl = puebloId && walletAAddress ? `https://artesania-viajera.vercel.app/?action=claim_stamp&id=${walletAAddress}` : "";
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : "https://artesania-viajera.vercel.app";
+  const qrPassportUrl = puebloId ? `${baseUrl}/?action=claim_passport&id=${puebloId}` : "";
+  const qrStampUrl = puebloId && walletAAddress ? `${baseUrl}/?action=claim_stamp&id=${walletAAddress}` : "";
   
   const currentQrUrl = activeQRTab === "passport" ? qrPassportUrl : qrStampUrl;
   const qrImgSrc = currentQrUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(currentQrUrl)}&color=${d ? "5FF5B4" : "000000"}&bgcolor=${d ? "0d0d0d" : "ffffff"}` : "";
