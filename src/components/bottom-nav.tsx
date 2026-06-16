@@ -22,6 +22,7 @@ const tabsTurista: { id: Tab; labelKey: string; icon: any }[] = [
 
 const tabsArtesano: { id: Tab; labelKey: string; icon: any }[] = [
   { id: "dashboard", labelKey: "Dashboard", icon: Wallet },
+  { id: "pasaporte", labelKey: "nav.pasaporte", icon: Fingerprint },
   { id: "impacto", labelKey: "Impacto ReFi", icon: TrendingUp },
   { id: "comunidad", labelKey: "nav.comunidad", icon: Users },
 ]
