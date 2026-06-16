@@ -40,7 +40,7 @@ function AppShell() {
 
   // Efecto para actualizar la pestaña si el rol cambia después del montaje
   useEffect(() => {
-    if (userRole === "artesano" && activeTab !== "dashboard" && activeTab !== "impacto" && activeTab !== "comunidad") {
+    if (userRole === "artesano" && activeTab !== "dashboard" && activeTab !== "impacto" && activeTab !== "comunidad" && activeTab !== "pasaporte") {
       setActiveTab("dashboard");
     } else if (userRole === "turista" && activeTab !== "pasaporte" && activeTab !== "tienda" && activeTab !== "momentos" && activeTab !== "comunidad" && activeTab !== "coleccion") {
       setActiveTab("pasaporte");
