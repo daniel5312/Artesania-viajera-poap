@@ -8,80 +8,185 @@ import { Loader2 } from "lucide-react";
 
 // Componentes del nuevo diseño
 import { ThemeProvider, useTheme } from "@/lib/theme-context";
+import { useGlobal } from "@/lib/global-context";
 import { WalletHeader } from "@/components/wallet-header";
 import { BottomNav } from "@/components/bottom-nav";
 import { PasaporteView } from "@/components/pasaporte-view";
 import { TiendaView } from "@/components/tienda-view";
 import { ComunidadView } from "@/components/comunidad-view";
 import { MomentosView } from "@/components/momentos-view";
+import { CollectionView } from "@/components/collection-view";
+import { DashboardWalletView } from "@/components/dashboard-wallet-view";
+import { ImpactDashboard } from "@/components/impact-dashboard";
 import FarcasterLoader from "@/components/farcasterLoader";
 
-type Tab = "pasaporte" | "tienda" | "comunidad" | "momentos";
+type Tab = "pasaporte" | "tienda" | "comunidad" | "momentos" | "coleccion" | "dashboard" | "impacto";
 
 function AppShell() {
-  const { login, authenticated, user } = usePrivy();
+  const { login, authenticated } = usePrivy();
   const { wallets } = useWallets();
   const searchParams = useSearchParams();
   const router = useRouter();
 
   // Traemos el contexto del nuevo tema
   const { isDarkMode } = useTheme();
+  const { userRole, setUserRole } = useGlobal();
 
   const [mounted, setMounted] = useState(false);
   const [isAutoMinting, setIsAutoMinting] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>("pasaporte");
+  
+  // Si es artesano, el home es el dashboard. Si es turista, el pasaporte.
+  const [activeTab, setActiveTab] = useState<Tab>(userRole === "artesano" ? "dashboard" : "pasaporte");
 
-  const selloPendiente = searchParams.get("sello");
+  // Efecto para actualizar la pestaña si el rol cambia después del montaje
+  useEffect(() => {
+    if (userRole === "artesano" && activeTab !== "dashboard" && activeTab !== "impacto" && activeTab !== "comunidad" && activeTab !== "pasaporte") {
+      setActiveTab("dashboard");
+    } else if (userRole === "turista" && activeTab !== "pasaporte" && activeTab !== "tienda" && activeTab !== "momentos" && activeTab !== "comunidad" && activeTab !== "coleccion") {
+      setActiveTab("pasaporte");
+    }
+  }, [userRole]);
+
+  const actionParam = searchParams.get("action");
+  const idParam = searchParams.get("id");
+  const simulateParam = searchParams.get("simulate") === "true";
+
+  const [qrAction, setQrAction] = useState<string | null>(null);
+  const [qrId, setQrId] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
     if (sdk?.actions?.ready) sdk.actions.ready();
   }, []);
 
-  // 🪄 LA MAGIA DEL QR FÍSICO (Auto-minteo)
+  // Guardar parámetros de URL en estado/sessionStorage para que sobrevivan al login
+  useEffect(() => {
+    if (actionParam && idParam) {
+      setQrAction(actionParam);
+      setQrId(idParam);
+      sessionStorage.setItem("qr_action", actionParam);
+      sessionStorage.setItem("qr_id", idParam);
+      
+      // Limpiar URL visualmente
+      router.replace("/", { scroll: false });
+    } else {
+      const savedAction = sessionStorage.getItem("qr_action");
+      const savedId = sessionStorage.getItem("qr_id");
+      if (savedAction && savedId) {
+        setQrAction(savedAction);
+        setQrId(savedId);
+      }
+    }
+  }, [actionParam, idParam, router]);
+
+  // 🪄 MÁQUINA DE ESTADOS: AUTO-MINTEO POST-LOGIN
   useEffect(() => {
     const autoMint = async () => {
-      if (
-        selloPendiente &&
-        authenticated &&
-        wallets.length > 0 &&
-        !isAutoMinting
-      ) {
+      if (qrAction && qrId && authenticated && wallets.length > 0 && !isAutoMinting) {
         setIsAutoMinting(true);
         const wallet = wallets[0];
 
         try {
-          console.log(
-            `Minteando automáticamente el sello de ${selloPendiente}...`,
-          );
+          console.log(`Minteando automáticamente ${qrAction} para ID: ${qrId}...`);
 
-          const response = await fetch("/api/mint-passport", {
+          const endpoint = qrAction === "claim_passport" ? "/api/mint-passport" : "/api/mint-badge";
+          const body = qrAction === "claim_passport" 
+            ? { recipient: wallet.address, puebloId: qrId }
+            : { recipient: wallet.address, badgeId: qrId }; // En MVP pasamos el ID del artesano como badge
+
+          const response = await fetch(endpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              recipient: wallet.address,
-              tipo: `Sello ${selloPendiente}`,
-            }),
+            body: JSON.stringify(body),
           });
 
           if (response.ok) {
-            alert(
-              `¡Magia! 🪄 El sello de ${selloPendiente} ha sido añadido a tu pasaporte.`,
-            );
+            const data = await response.json().catch(() => ({}));
+            if (data.status === "already_claimed") {
+              alert(`¡Ups! Ya tienes este sello en tu colección. No puedes reclamarlo dos veces.`);
+            } else {
+              alert(`¡Magia! 🪄 Has recibido un regalo exclusivo en tu pasaporte.`);
+            }
+          } else {
+            alert(`Aviso: Este sello ya está en tu colección o hubo un error de red.`);
           }
         } catch (error) {
           console.error("Error en auto-mint:", error);
         } finally {
           setIsAutoMinting(false);
-          router.replace("/", { scroll: false });
+          setQrAction(null);
+          setQrId(null);
+          sessionStorage.removeItem("qr_action");
+          sessionStorage.removeItem("qr_id");
+          
+          if (userRole === "turista") setActiveTab("pasaporte");
         }
       }
     };
 
     autoMint();
-  }, [selloPendiente, authenticated, wallets, isAutoMinting, router]);
+  }, [qrAction, qrId, authenticated, wallets, isAutoMinting, userRole]);
 
   if (!mounted) return null;
+
+  // ESTADO PREVIEW (Aviso si hay QR pero no está logueado, o si forzamos la simulación)
+  const isSimulatingPreview = simulateParam && qrAction && qrId;
+  if ((qrAction && qrId && !authenticated) || isSimulatingPreview) {
+    return (
+      <div className={`mx-auto min-h-screen max-w-md relative overflow-hidden bg-background text-foreground flex flex-col items-center justify-center p-6 ${isDarkMode ? "dark" : ""}`}>
+        <div className="absolute inset-0 z-0 bg-gradient-to-br from-primary/20 via-background to-background"></div>
+        <div className="z-10 flex flex-col items-center text-center">
+          <div className="w-24 h-24 mb-6 rounded-3xl bg-primary/20 border-2 border-primary/50 shadow-[0_0_40px_rgba(var(--primary-rgb),0.3)] flex items-center justify-center animate-pulse">
+            <span className="text-4xl">🎁</span>
+          </div>
+          <h1 className="text-2xl font-black mb-2 uppercase tracking-tight">¡Regalo Desbloqueado!</h1>
+          <p className="text-sm opacity-80 mb-8 max-w-[250px]">
+            {qrAction === "claim_passport" 
+              ? `Estás a punto de recibir el Pasaporte Oficial de ${qrId.toUpperCase()}.`
+              : `Has desbloqueado el NFT Único de este Artesano.`}
+            <br/><br/>
+            Conéctate con tu billetera para guardarlo para siempre.
+          </p>
+          <button 
+            onClick={() => {
+              if (isSimulatingPreview) {
+                // Removemos el parámetro 'simulate' para que el useEffect de automint se dispare normalmente con la sesión actual
+                window.location.href = window.location.pathname + "?action=" + qrAction + "&id=" + qrId;
+              } else {
+                login();
+              }
+            }} 
+            className="w-full py-4 bg-primary text-white font-black text-lg uppercase rounded-2xl shadow-xl active:scale-95 transition-all"
+          >
+            Conectar Billetera
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (authenticated && userRole === null) {
+    return (
+      <div className={`mx-auto min-h-screen max-w-md relative overflow-hidden bg-background text-foreground flex flex-col items-center justify-center p-6 ${isDarkMode ? "dark" : ""}`}>
+        <h1 className="text-2xl font-black mb-2 text-center">¡Bienvenido a Artesanía Viajera!</h1>
+        <p className="text-sm text-center mb-8 opacity-70">Para personalizar tu experiencia, cuéntanos cómo vas a usar la aplicación.</p>
+        
+        <div className="flex flex-col gap-4 w-full">
+          <button onClick={() => setUserRole("turista")} className="p-6 rounded-2xl border-2 border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors flex flex-col items-center gap-3 text-center active:scale-95">
+            <span className="text-4xl">🌍</span>
+            <span className="font-bold text-lg">Soy Turista</span>
+            <span className="text-xs opacity-70">Quiero comprar artesanías y coleccionar sellos.</span>
+          </button>
+          
+          <button onClick={() => setUserRole("artesano")} className="p-6 rounded-2xl border-2 border-[#5FF5B4]/20 bg-[#5FF5B4]/5 hover:bg-[#5FF5B4]/10 transition-colors flex flex-col items-center gap-3 text-center active:scale-95">
+            <span className="text-4xl">🎨</span>
+            <span className="font-bold text-lg">Soy Artesano</span>
+            <span className="text-xs opacity-70">Quiero cobrar, ver mis métricas y regalar sellos.</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -102,21 +207,6 @@ function AppShell() {
         </div>
       )}
 
-      {/* AVISO SI HAY QR PERO NO ESTÁ LOGUEADO */}
-      {selloPendiente && !authenticated && (
-        <div className="mx-5 mt-4 p-4 rounded-2xl bg-primary/10 border border-primary/30 text-center animate-pulse">
-          <p className="text-sm font-bold text-primary mb-2">
-            ¡Tienes un sello de {selloPendiente} esperando!
-          </p>
-          <button
-            onClick={login}
-            className="text-xs bg-primary text-primary-foreground px-4 py-2 rounded-full font-bold shadow-md hover:scale-105 transition-transform"
-          >
-            Conectar para reclamar
-          </button>
-        </div>
-      )}
-
       {/* VISTAS DINÁMICAS */}
       <main className="mt-2 pb-24">
         {activeTab === "pasaporte" && (
@@ -126,9 +216,12 @@ function AppShell() {
             }}
           />
         )}
-        {activeTab === "tienda" && <TiendaView />}
+        {activeTab === "tienda" && <TiendaView onNavigate={setActiveTab} />}
+        {activeTab === "coleccion" && <CollectionView />}
         {activeTab === "momentos" && <MomentosView selectedSello={undefined} />}
         {activeTab === "comunidad" && <ComunidadView />}
+        {activeTab === "dashboard" && <DashboardWalletView onNavigate={setActiveTab} />}
+        {activeTab === "impacto" && <ImpactDashboard />}
       </main>
 
       {/* NAVEGACIÓN INFERIOR ESTILO APP */}
